@@ -1,0 +1,1460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bug Reports / CPOchat — Deployment Bug Tracker</title>
+<style>
+/* ── Reset ── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+
+:root{
+  --bg:#0d0f18;
+  --surface:#13161f;
+  --surface2:#181c2a;
+  --surface3:#1e2338;
+  --border:#252c42;
+  --text:#e2e8f8;
+  --text-dim:#7888aa;
+  --text-faint:#33405a;
+
+  /* Production = neon pink */
+  --prod:#FF4DA6;
+  --prod-bg:#1f0815;
+  --prod-dim:#2d0f1e;
+  --prod-glow:rgba(255,77,166,.22);
+  --prod-border:#4a1530;
+
+  /* Dev = gold */
+  --dev:#F5A623;
+  --dev-bg:#1c1204;
+  --dev-dim:#281a06;
+  --dev-glow:rgba(245,166,35,.18);
+  --dev-border:#3d2a08;
+
+  /* Test = cyan-blue */
+  --test:#38BDF8;
+  --test-bg:#041420;
+  --test-dim:#071c2e;
+  --test-glow:rgba(56,189,248,.18);
+  --test-border:#0a2a40;
+
+  /* Resolved = gray */
+  --res:#64748b;
+  --res-bg:#0f1219;
+  --res-dim:#131820;
+  --res-glow:rgba(100,116,139,.10);
+  --res-border:#1e2535;
+
+  /* Archive = muted amber/brown */
+  --arc:#b08968;
+  --arc-bg:#15110c;
+  --arc-dim:#1d160f;
+  --arc-glow:rgba(176,137,104,.12);
+  --arc-border:#2e2417;
+
+  --accent:#6366f1;
+  --accent-glow:rgba(99,102,241,.3);
+  --radius:10px;
+  --card-w:295px;
+  --mono:'Courier New',monospace;
+}
+
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:auto;}
+
+/* ── Header ── */
+header{
+  background:var(--surface);border-bottom:1px solid var(--border);
+  padding:0 20px;display:flex;align-items:center;gap:14px;height:54px;
+  position:sticky;top:0;z-index:200;
+  box-shadow:0 2px 20px rgba(0,0,0,.5);
+}
+.logo{font-size:17px;font-weight:800;letter-spacing:-.6px;display:flex;align-items:center;gap:9px;}
+.logo-dot{width:11px;height:11px;border-radius:50%;background:var(--prod);box-shadow:0 0 10px var(--prod),0 0 20px var(--prod-glow);flex-shrink:0;}
+.logo-bug{flex-shrink:0;filter:drop-shadow(0 0 5px rgba(95,208,104,0.45));}
+.logo em{font-style:normal;color:var(--text-dim);font-weight:400;font-size:14px;}
+.htools{margin-left:auto;display:flex;gap:7px;align-items:center;}
+
+/* ── Toolbar ── */
+.toolbar{
+  padding:10px 20px;display:flex;gap:8px;align-items:center;
+  background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap;
+}
+input[type=text],select,textarea{
+  background:var(--surface3);border:1px solid var(--border);color:var(--text);
+  border-radius:7px;padding:6px 10px;font-size:13px;outline:none;
+  transition:border-color .15s,box-shadow .15s;
+}
+input[type=text]:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow);}
+select option{background:var(--surface2);}
+#searchInput{width:180px;}
+
+/* ── Buttons ── */
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 13px;border:none;border-radius:7px;
+  font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;
+}
+.btn-primary{background:var(--accent);color:#fff;box-shadow:0 0 0 0 var(--accent-glow);}
+.btn-primary:hover{background:#4f52d9;box-shadow:0 0 12px var(--accent-glow);}
+.btn-sm{padding:5px 11px;font-size:12px;}
+.btn-ghost{background:var(--surface3);color:var(--text-dim);border:1px solid var(--border);}
+.btn-ghost:hover{color:var(--text);border-color:var(--accent);}
+.btn-ghost.active{background:var(--arc-dim);color:var(--arc);border-color:var(--arc-border);}
+.btn-danger{background:#2d0a0a;color:var(--prod);border:1px solid #4a1515;}
+.btn-danger:hover{background:#4a1515;}
+.btn-clear{background:transparent;color:var(--text-dim);border:1px solid var(--border);font-size:12px;padding:5px 10px;}
+.btn-clear:hover{color:var(--text);border-color:var(--text-dim);}
+
+/* zone-colored new-bug button */
+.btn-zone-prod{background:var(--prod-dim);color:var(--prod);border:1px solid var(--prod-border);}
+.btn-zone-prod:hover{background:var(--prod-border);box-shadow:0 0 10px var(--prod-glow);}
+.btn-zone-dev{background:var(--dev-dim);color:var(--dev);border:1px solid var(--dev-border);}
+.btn-zone-dev:hover{background:var(--dev-border);box-shadow:0 0 10px var(--dev-glow);}
+.btn-zone-test{background:var(--test-dim);color:var(--test);border:1px solid var(--test-border);}
+.btn-zone-test:hover{background:var(--test-border);box-shadow:0 0 10px var(--test-glow);}
+
+/* ── Summary bar ── */
+.summary-bar{padding:8px 20px;display:flex;gap:10px;flex-wrap:wrap;background:var(--surface);border-bottom:1px solid var(--border);}
+.summary-pill{
+  display:flex;align-items:center;gap:8px;padding:5px 14px;
+  border-radius:20px;font-size:12px;font-weight:600;border:1px solid transparent;
+}
+.summary-pill .num{font-size:15px;font-weight:800;}
+.pill-prod{background:var(--prod-bg);color:var(--prod);border-color:var(--prod-border);}
+.pill-dev{background:var(--dev-bg);color:var(--dev);border-color:var(--dev-border);}
+.pill-test{background:var(--test-bg);color:var(--test);border-color:var(--test-border);}
+.pill-res{background:var(--res-bg);color:var(--res);border-color:var(--res-border);}
+
+/* ── Board ── */
+.board{display:flex;gap:14px;padding:16px 20px 60px;min-height:calc(100vh - 220px);align-items:flex-start;}
+
+.column{width:var(--card-w);flex-shrink:0;}
+
+.col-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 14px;border-radius:var(--radius) var(--radius) 0 0;
+  border:1px solid var(--border);border-bottom:none;
+  font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
+}
+.col-prod .col-header{background:var(--prod-bg);color:var(--prod);border-color:var(--prod-border);}
+.col-dev  .col-header{background:var(--dev-bg); color:var(--dev); border-color:var(--dev-border);}
+.col-test .col-header{background:var(--test-bg);color:var(--test);border-color:var(--test-border);}
+.col-res  .col-header{background:var(--res-bg); color:var(--res); border-color:var(--res-border);}
+.col-archive .col-header{background:var(--arc-bg); color:var(--arc); border-color:var(--arc-border);}
+
+.col-cnt{font-size:11px;font-weight:800;background:rgba(255,255,255,.1);border-radius:9px;padding:1px 8px;}
+
+.col-body{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:0 0 var(--radius) var(--radius);
+  min-height:180px;padding:10px;display:flex;flex-direction:column;gap:9px;
+  transition:background .15s,border-color .15s;
+}
+.col-body.drag-over{background:var(--surface3);border-color:var(--accent);}
+
+/* ── Cards ── */
+.card{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:9px;padding:10px 12px;cursor:grab;
+  transition:transform .15s,box-shadow .15s,border-color .15s;
+  position:relative;user-select:none;
+}
+.card.zone-Production{border-left:3px solid var(--prod);}
+.card.zone-Dev       {border-left:3px solid var(--dev);}
+.card.zone-Test      {border-left:3px solid var(--test);}
+.card.zone-Resolved  {border-left:3px solid var(--res);}
+.card.zone-Archive   {border-left:3px solid var(--arc);}
+
+.card.zone-Production:hover{box-shadow:0 4px 20px var(--prod-glow),0 2px 8px rgba(0,0,0,.4);transform:translateY(-2px);border-color:var(--prod-border);}
+.card.zone-Dev:hover       {box-shadow:0 4px 20px var(--dev-glow), 0 2px 8px rgba(0,0,0,.4);transform:translateY(-2px);border-color:var(--dev-border);}
+.card.zone-Test:hover      {box-shadow:0 4px 20px var(--test-glow),0 2px 8px rgba(0,0,0,.4);transform:translateY(-2px);border-color:var(--test-border);}
+.card.zone-Resolved:hover  {box-shadow:0 4px 16px rgba(0,0,0,.5);transform:translateY(-1px);}
+.card.zone-Archive:hover   {box-shadow:0 4px 16px var(--arc-glow);transform:translateY(-1px);border-color:var(--arc-border);}
+.card.dragging{opacity:.35;cursor:grabbing;}
+
+/* Collapsed header row */
+.card-header{display:flex;align-items:flex-start;gap:7px;cursor:pointer;}
+.zone-pill{
+  font-size:9px;font-weight:800;padding:2px 7px;border-radius:4px;
+  text-transform:uppercase;letter-spacing:.6px;flex-shrink:0;margin-top:2px;
+}
+.zp-Production{background:var(--prod-bg);color:var(--prod);border:1px solid var(--prod-border);}
+.zp-Dev       {background:var(--dev-bg); color:var(--dev); border:1px solid var(--dev-border);}
+.zp-Test      {background:var(--test-bg);color:var(--test);border:1px solid var(--test-border);}
+.zp-Resolved  {background:var(--res-bg); color:var(--res); border:1px solid var(--res-border);}
+
+.card-title{font-size:13px;font-weight:700;color:var(--text);line-height:1.4;flex:1;}
+.expand-chevron{
+  font-size:18px;color:var(--text-dim);flex-shrink:0;
+  width:26px;height:26px;display:flex;align-items:center;justify-content:center;
+  border-radius:50%;background:var(--surface3);border:1px solid var(--border);
+  transition:transform .22s ease,color .15s,background .15s,border-color .15s;line-height:1;
+}
+.card-header:hover .expand-chevron{color:var(--accent);border-color:var(--accent);background:var(--surface);}
+.card.expanded .expand-chevron{transform:rotate(180deg);color:var(--accent);border-color:var(--accent);}
+
+/* Collapsed description (always visible, clamped) */
+.card-desc-collapsed{
+  font-size:12px;color:#ffffff;line-height:1.5;
+  margin-top:5px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.card.expanded .card-desc-collapsed{
+  -webkit-line-clamp:unset;display:block;overflow:visible;
+}
+
+/* Collapsed quick-info strip */
+.card-quick{
+  display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;
+  padding-bottom:7px;border-bottom:1px solid var(--border);
+}
+.qchip{
+  font-size:11px;color:var(--text-dim);display:flex;align-items:center;gap:3px;
+}
+.qchip-eta{color:var(--text-dim);}
+
+/* Collapsed action row */
+.card-quick-actions{
+  display:flex;gap:4px;margin-top:7px;align-items:center;
+}
+.card-quick-actions button{
+  background:none;border:1px solid var(--border);color:var(--text-dim);
+  border-radius:5px;padding:2px 8px;font-size:11px;cursor:pointer;
+  transition:all .12s;white-space:nowrap;
+}
+.card-quick-actions button:hover{background:var(--surface);color:var(--text);}
+.card-quick-actions button.del:hover{color:var(--prod);border-color:var(--prod);}
+.card-quick-actions button.resolve:hover{color:#50e3a0;border-color:#1a5040;}
+.card-quick-actions .spacer{flex:1;}
+
+/* Expandable detail panel */
+.card-detail{
+  overflow:hidden;
+  max-height:0;
+  transition:max-height .28s ease,opacity .2s ease,margin-top .2s ease;
+  opacity:0;
+  margin-top:0;
+}
+.card.expanded .card-detail{
+  max-height:900px;
+  opacity:1;
+  margin-top:8px;
+}
+
+.card-desc{
+  font-size:12px;color:var(--text-dim);line-height:1.5;margin-bottom:8px;
+}
+.card-thumb{
+  width:100%;max-height:90px;object-fit:cover;border-radius:5px;
+  margin-bottom:8px;border:1px solid var(--border);cursor:zoom-in;display:block;
+  transition:opacity .15s;
+}
+.card-thumb:hover{opacity:.85;}
+.card-meta{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;}
+.meta-chip{
+  font-size:11px;color:var(--text-dim);
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:4px;padding:2px 7px;display:flex;align-items:center;gap:4px;
+  text-decoration:none;transition:all .12s;
+}
+a.meta-chip:hover{color:var(--accent);border-color:var(--accent);}
+
+/* Detail dates */
+.card-dates{font-size:10px;color:var(--text-faint);font-family:var(--mono);line-height:1.7;margin-bottom:6px;}
+
+/* Copy menu */
+.copy-wrap{position:relative;display:inline-block;}
+.copy-menu{
+  position:absolute;bottom:calc(100% + 4px);right:0;
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:8px;padding:4px;z-index:50;min-width:160px;
+  box-shadow:0 8px 24px rgba(0,0,0,.6);display:none;
+}
+.copy-menu.open{display:block;}
+.copy-menu button{
+  display:block;width:100%;text-align:left;padding:6px 10px;
+  background:none;border:none;color:var(--text-dim);font-size:12px;
+  cursor:pointer;border-radius:5px;transition:all .1s;
+}
+.copy-menu button:hover{background:var(--surface3);color:var(--text);}
+
+/* History inside detail */
+.history-toggle{
+  font-size:11px;color:var(--text-faint);cursor:pointer;
+  display:flex;align-items:center;gap:4px;margin-top:4px;
+  background:none;border:none;padding:0;transition:color .12s;
+}
+.history-toggle:hover{color:var(--accent);}
+.history-list{margin-top:5px;border-top:1px dashed var(--border);padding-top:5px;display:none;flex-direction:column;gap:3px;}
+.history-list.open{display:flex;}
+.history-item{font-size:11px;color:var(--text-dim);padding:3px 0;border-bottom:1px solid var(--border);line-height:1.4;}
+.history-item:last-child{border-bottom:none;}
+.hts{font-family:var(--mono);font-size:10px;color:var(--text-faint);display:block;margin-bottom:1px;}
+
+/* ── Screenshot sections ── */
+.ss-section{margin-bottom:12px;}
+.ss-section-label{
+  font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;
+  margin-bottom:7px;display:flex;align-items:center;gap:7px;
+}
+.ss-label-bug  { color:#f87171; }
+.ss-label-pass { color:#4ade80; }
+.ss-label-dot  { width:7px;height:7px;border-radius:50%;flex-shrink:0; }
+.ss-label-dot.bug  { background:#f87171; }
+.ss-label-dot.pass { background:#4ade80; }
+
+.ss-gallery{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:7px;}
+.ss-thumb-wrap{position:relative;cursor:pointer;border-radius:6px;overflow:hidden;border:1px solid var(--border);transition:border-color .15s;}
+.ss-thumb-wrap:hover{border-color:var(--text-dim);}
+.ss-thumb-wrap img{width:80px;height:60px;object-fit:cover;display:block;}
+.ss-thumb-del{
+  position:absolute;top:3px;right:3px;
+  background:rgba(0,0,0,.75);color:#f87171;border:none;border-radius:3px;
+  font-size:10px;padding:1px 5px;cursor:pointer;line-height:1.4;display:none;
+}
+.ss-thumb-wrap:hover .ss-thumb-del{display:block;}
+
+.ss-add-row{display:flex;gap:7px;align-items:center;flex-wrap:wrap;}
+.ss-add-btn{
+  display:inline-flex;align-items:center;gap:5px;
+  background:var(--surface3);border:1px dashed var(--border);
+  color:var(--text-dim);border-radius:6px;padding:5px 11px;font-size:12px;
+  cursor:pointer;transition:all .15s;white-space:nowrap;
+}
+.ss-add-btn:hover{border-color:var(--accent);color:var(--text);}
+.ss-add-hint{font-size:11px;color:var(--text-faint);}
+
+/* Card expanded screenshot gallery */
+.card-ss-section{margin-bottom:10px;}
+.card-ss-label{
+  font-size:10px;font-weight:400;letter-spacing:.5px;text-transform:uppercase;
+  margin-bottom:5px;display:flex;align-items:center;gap:5px;color:#ffffff !important;
+}
+.card-ss-label.bug-lbl  { color:rgba(255,255,255,.55) !important; }
+.card-ss-label.pass-lbl { color:#3a9e5c !important; }
+.card-ss-gallery{display:flex;flex-wrap:wrap;gap:5px;}
+.card-ss-gallery img{
+  width:72px;height:54px;object-fit:cover;border-radius:5px;
+  border:1px solid var(--border);cursor:zoom-in;transition:opacity .15s;
+}
+.card-ss-gallery img:hover{opacity:.8;border-color:var(--text-dim);}
+
+/* card detail full desc (unclamped in expanded) */
+.card-desc-full{font-size:12px;color:var(--text-dim);line-height:1.5;margin-bottom:8px;}
+.zone-picker-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.8);
+  display:none;align-items:center;justify-content:center;z-index:400;
+  backdrop-filter:blur(6px);
+}
+.zone-picker-overlay.open{display:flex;}
+.zone-picker{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:16px;padding:32px 28px;width:420px;max-width:96vw;
+  box-shadow:0 24px 80px rgba(0,0,0,.7);
+}
+.zone-picker h2{font-size:16px;font-weight:700;margin-bottom:6px;}
+.zone-picker p{font-size:13px;color:var(--text-dim);margin-bottom:22px;}
+.zone-options{display:flex;flex-direction:column;gap:10px;}
+.zone-opt{
+  display:flex;align-items:center;gap:14px;padding:14px 16px;
+  border-radius:10px;border:1px solid;cursor:pointer;
+  transition:all .15s;font-weight:600;font-size:14px;
+}
+.zone-opt-Production{background:var(--prod-bg);color:var(--prod);border-color:var(--prod-border);}
+.zone-opt-Production:hover{background:var(--prod-dim);box-shadow:0 0 16px var(--prod-glow);}
+.zone-opt-Dev{background:var(--dev-bg);color:var(--dev);border-color:var(--dev-border);}
+.zone-opt-Dev:hover{background:var(--dev-dim);box-shadow:0 0 16px var(--dev-glow);}
+.zone-opt-Test{background:var(--test-bg);color:var(--test);border-color:var(--test-border);}
+.zone-opt-Test:hover{background:var(--test-dim);box-shadow:0 0 16px var(--test-glow);}
+.zone-opt-icon{font-size:20px;}
+.picker-cancel{margin-top:16px;width:100%;background:none;border:1px solid var(--border);color:var(--text-dim);border-radius:7px;padding:8px;cursor:pointer;font-size:13px;transition:all .15s;}
+.picker-cancel:hover{color:var(--text);border-color:var(--text-dim);}
+
+/* ── Modal ── */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.78);
+  display:none;align-items:center;justify-content:center;z-index:300;backdrop-filter:blur(5px);
+}
+.modal-overlay.open{display:flex;}
+.modal{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:14px;width:620px;max-width:96vw;max-height:92vh;overflow-y:auto;
+  padding:28px;box-shadow:0 24px 80px rgba(0,0,0,.7);
+}
+.modal-zone-stripe{height:4px;border-radius:4px 4px 0 0;margin:-28px -28px 24px;background:var(--accent);}
+.modal-zone-stripe.stripe-Production{background:var(--prod);box-shadow:0 0 16px var(--prod-glow);}
+.modal-zone-stripe.stripe-Dev       {background:var(--dev); box-shadow:0 0 16px var(--dev-glow);}
+.modal-zone-stripe.stripe-Test      {background:var(--test);box-shadow:0 0 16px var(--test-glow);}
+.modal-zone-stripe.stripe-Resolved  {background:var(--res);}
+
+.modal h2{font-size:18px;font-weight:700;margin-bottom:20px;}
+.modal-zone-tag{font-size:12px;font-weight:700;padding:3px 10px;border-radius:6px;margin-left:10px;vertical-align:middle;}
+.mzt-Production{background:var(--prod-bg);color:var(--prod);border:1px solid var(--prod-border);}
+.mzt-Dev       {background:var(--dev-bg); color:var(--dev); border:1px solid var(--dev-border);}
+.mzt-Test      {background:var(--test-bg);color:var(--test);border:1px solid var(--test-border);}
+.mzt-Resolved  {background:var(--res-bg); color:var(--res); border:1px solid var(--res-border);}
+
+.form-row{margin-bottom:14px;}
+.form-row label{display:block;font-size:11px;font-weight:700;color:var(--text-dim);margin-bottom:5px;letter-spacing:.4px;text-transform:uppercase;}
+.form-row input[type=text],.form-row select,.form-row textarea{width:100%;}
+.form-row textarea{resize:vertical;min-height:68px;font-family:inherit;}
+.form-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+.screenshot-area{
+  background:var(--surface2);border:2px dashed var(--border);
+  border-radius:8px;padding:14px;text-align:center;cursor:text;
+  transition:border-color .15s;position:relative;
+}
+.screenshot-area.hover{border-color:var(--accent);}
+.screenshot-area p{font-size:12px;color:var(--text-dim);}
+.screenshot-area img{max-width:100%;max-height:180px;border-radius:6px;display:none;margin:0 auto;}
+.screenshot-area img.has-img{display:block;}
+.remove-img-btn{
+  position:absolute;top:8px;right:8px;
+  background:var(--prod-bg);color:var(--prod);border:1px solid var(--prod-border);
+  border-radius:4px;padding:2px 8px;font-size:11px;cursor:pointer;display:none;
+}
+.screenshot-area.has-screenshot .remove-img-btn{display:block;}
+.storage-warning{background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.3);color:var(--dev);border-radius:6px;padding:8px 12px;font-size:12px;margin-top:8px;display:none;}
+.storage-warning.show{display:block;}
+
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);}
+
+/* ── Confirm ── */
+.confirm-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.82);
+  display:none;align-items:center;justify-content:center;z-index:500;backdrop-filter:blur(6px);
+}
+.confirm-overlay.open{display:flex;}
+.confirm-box{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:13px;padding:28px;width:380px;max-width:96vw;
+  text-align:center;box-shadow:0 16px 60px rgba(0,0,0,.7);
+}
+.confirm-box h3{margin-bottom:10px;font-size:16px;}
+.confirm-box p{font-size:13px;color:var(--text-dim);margin-bottom:20px;line-height:1.5;}
+.confirm-btns{display:flex;gap:10px;justify-content:center;}
+
+/* ── Lightbox ── */
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.93);display:none;align-items:center;justify-content:center;z-index:700;cursor:zoom-out;}
+.lightbox.open{display:flex;}
+.lightbox img{max-width:92vw;max-height:88vh;border-radius:8px;box-shadow:0 0 60px rgba(0,0,0,.8);}
+
+/* ── Toast ── */
+.toast-wrap{position:fixed;bottom:22px;right:22px;display:flex;flex-direction:column;gap:8px;z-index:800;}
+.toast{
+  background:var(--surface2);border:1px solid var(--border);color:var(--text);
+  padding:10px 16px;border-radius:8px;font-size:13px;box-shadow:0 4px 20px rgba(0,0,0,.5);
+  animation:slideIn .2s ease;max-width:300px;
+}
+.toast.ok {border-left:3px solid #50e3a0;}
+.toast.err{border-left:3px solid var(--prod);}
+@keyframes slideIn{from{opacity:0;transform:translateX(20px);}to{opacity:1;transform:translateX(0);}}
+
+/* ── Misc ── */
+.empty-col{text-align:center;padding:28px 0;color:var(--text-faint);font-size:12px;}
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+#importFileInput{display:none;}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header>
+  <div class="logo">
+    <svg class="logo-bug" width="26" height="26" viewBox="0 0 32 32" fill="none">
+      <!-- body segments (back to front) -->
+      <circle cx="7"  cy="20" r="4"   fill="#5fd068" opacity="0.55"/>
+      <circle cx="11" cy="18" r="4.3" fill="#5fd068" opacity="0.7"/>
+      <circle cx="15.5" cy="17" r="4.6" fill="#5fd068" opacity="0.85"/>
+      <!-- head -->
+      <circle cx="21" cy="15.5" r="5.4" fill="#5fd068"/>
+      <!-- antennae -->
+      <path d="M20 11 Q19 7 17.5 6.5" stroke="#5fd068" stroke-width="1.4" stroke-linecap="round" fill="none"/>
+      <path d="M23 11 Q24 7 25.5 6.5" stroke="#5fd068" stroke-width="1.4" stroke-linecap="round" fill="none"/>
+      <circle cx="17.3" cy="6.2" r="1.1" fill="#5fd068"/>
+      <circle cx="25.7" cy="6.2" r="1.1" fill="#5fd068"/>
+      <!-- eyes -->
+      <circle cx="20.2" cy="14.8" r="1.15" fill="#fff"/>
+      <circle cx="23.2" cy="14.8" r="1.15" fill="#fff"/>
+      <circle cx="20.4" cy="15"   r="0.55" fill="#16331a"/>
+      <circle cx="23.4" cy="15"   r="0.55" fill="#16331a"/>
+      <!-- smile -->
+      <path d="M20 18 Q21.8 19.6 23.6 18" stroke="#16331a" stroke-width="1" stroke-linecap="round" fill="none"/>
+      <!-- cheek blush -->
+      <circle cx="18.6" cy="17.4" r="1" fill="#fff" opacity="0.35"/>
+    </svg>
+    Bug Reports <em>/ CPOchat</em>
+  </div>
+  <div class="htools">
+    <button class="btn btn-ghost btn-sm" id="archiveToggleBtn" onclick="toggleArchive()">📦 Archive</button>
+    <button class="btn btn-ghost btn-sm" onclick="exportJSON()">⬆ Export</button>
+    <button class="btn btn-ghost btn-sm" onclick="document.getElementById('importFileInput').click()">⬇ Import</button>
+    <input type="file" id="importFileInput" accept=".json" onchange="importJSON(event)">
+    <button class="btn btn-primary btn-sm" onclick="openZonePicker()">＋ New Bug</button>
+  </div>
+</header>
+
+<!-- Toolbar -->
+<div class="toolbar">
+  <input type="text" id="searchInput" placeholder="🔍 Search…" oninput="renderBoard()">
+  <select id="ownerFilter" onchange="renderBoard()">
+    <option value="">All Owners</option>
+  </select>
+  <select id="zoneFilter" onchange="renderBoard()">
+    <option value="">All Zones</option>
+    <option value="Production">Production</option>
+    <option value="Dev">Dev</option>
+    <option value="Test">Test</option>
+    <option value="Resolved">Resolved</option>
+    <option value="Archive">Archive</option>
+  </select>
+  <button class="btn btn-clear" onclick="clearFilters()">✕ Clear</button>
+  <button class="btn btn-ghost btn-sm" id="sortBtn" onclick="toggleSort()" title="Sort Production / Dev / Test by title">↓ Title Z–A</button>
+</div>
+
+<!-- Summary bar -->
+<div class="summary-bar" id="summaryBar"></div>
+
+<!-- First-run / empty import helper banner -->
+<div id="importBanner" style="display:none;margin:10px 20px 0;padding:12px 16px;background:var(--surface2);border:1px solid var(--accent);border-radius:9px;font-size:13px;color:var(--text-dim);line-height:1.5;">
+  <div style="display:flex;align-items:flex-start;gap:10px;">
+    <span style="font-size:16px;">📂</span>
+    <div style="flex:1;">
+      <strong style="color:var(--text);">Board is empty.</strong> If you have data from the Artifact preview, use <strong>⬇ Import</strong> to load the JSON file you exported. Local files and the preview use separate storage, so data doesn't carry over automatically.
+      <div style="margin-top:8px;display:flex;gap:8px;">
+        <button class="btn btn-primary btn-sm" onclick="document.getElementById('importFileInput').click()">⬇ Import JSON now</button>
+        <button class="btn btn-ghost btn-sm" onclick="dismissImportBanner()">Dismiss</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Board -->
+<div class="board" id="board">
+  <div class="column col-prod" id="col-Production">
+    <div class="col-header">
+      <span style="display:flex;align-items:center;gap:7px;"><span style="width:9px;height:9px;border-radius:50%;background:#FF4DA6;box-shadow:0 0 7px #FF4DA6;display:inline-block;flex-shrink:0;"></span>Production</span>
+      <span class="col-cnt" id="cnt-Production">0</span>
+    </div>
+    <div class="col-body" id="body-Production"
+         ondragover="onDragOver(event,'Production')"
+         ondragleave="onDragLeave(event,'Production')"
+         ondrop="onDrop(event,'Production')">
+      <div class="empty-col">No production bugs 🎉</div>
+    </div>
+  </div>
+
+  <div class="column col-dev" id="col-Dev">
+    <div class="col-header">
+      <span>🟡 Dev</span>
+      <span class="col-cnt" id="cnt-Dev">0</span>
+    </div>
+    <div class="col-body" id="body-Dev"
+         ondragover="onDragOver(event,'Dev')"
+         ondragleave="onDragLeave(event,'Dev')"
+         ondrop="onDrop(event,'Dev')">
+      <div class="empty-col">No dev bugs 🎉</div>
+    </div>
+  </div>
+
+  <div class="column col-test" id="col-Test">
+    <div class="col-header">
+      <span>🔵 Test</span>
+      <span class="col-cnt" id="cnt-Test">0</span>
+    </div>
+    <div class="col-body" id="body-Test"
+         ondragover="onDragOver(event,'Test')"
+         ondragleave="onDragLeave(event,'Test')"
+         ondrop="onDrop(event,'Test')">
+      <div class="empty-col">No test bugs 🎉</div>
+    </div>
+  </div>
+
+  <div class="column col-res" id="col-Resolved">
+    <div class="col-header">
+      <span>⚪ Resolved</span>
+      <span class="col-cnt" id="cnt-Resolved">0</span>
+    </div>
+    <div class="col-body" id="body-Resolved"
+         ondragover="onDragOver(event,'Resolved')"
+         ondragleave="onDragLeave(event,'Resolved')"
+         ondrop="onDrop(event,'Resolved')">
+      <div class="empty-col">Nothing resolved yet</div>
+    </div>
+  </div>
+
+  <div class="column col-archive" id="col-Archive" style="display:none;">
+    <div class="col-header">
+      <span>📦 Archive</span>
+      <span class="col-cnt" id="cnt-Archive">0</span>
+    </div>
+    <div class="col-body" id="body-Archive"
+         ondragover="onDragOver(event,'Archive')"
+         ondragleave="onDragLeave(event,'Archive')"
+         ondrop="onDrop(event,'Archive')">
+      <div class="empty-col">Drag outdated resolved bugs here 📦</div>
+    </div>
+  </div>
+</div>
+
+<!-- Zone Picker -->
+<div class="zone-picker-overlay" id="zonePickerOverlay">
+  <div class="zone-picker">
+    <h2>Where is this bug?</h2>
+    <p>Select the deployment zone to create the bug card in.</p>
+    <div class="zone-options">
+      <div class="zone-opt zone-opt-Production" onclick="openModal(null,'Production')">
+        <span class="zone-opt-icon" style="display:inline-flex;align-items:center;justify-content:center;"><span style="width:14px;height:14px;border-radius:50%;background:#FF4DA6;box-shadow:0 0 10px #FF4DA6,0 0 20px rgba(255,77,166,.5);display:inline-block;"></span></span>
+        <div>
+          <div>Production</div>
+          <div style="font-size:11px;font-weight:400;opacity:.7;margin-top:2px;">Live environment — urgent</div>
+        </div>
+      </div>
+      <div class="zone-opt zone-opt-Dev" onclick="openModal(null,'Dev')">
+        <span class="zone-opt-icon">🟡</span>
+        <div>
+          <div>Dev</div>
+          <div style="font-size:11px;font-weight:400;opacity:.7;margin-top:2px;">Development environment</div>
+        </div>
+      </div>
+      <div class="zone-opt zone-opt-Test" onclick="openModal(null,'Test')">
+        <span class="zone-opt-icon">🔵</span>
+        <div>
+          <div>Test</div>
+          <div style="font-size:11px;font-weight:400;opacity:.7;margin-top:2px;">QA / staging environment</div>
+        </div>
+      </div>
+    </div>
+    <button class="picker-cancel" onclick="closeZonePicker()">Cancel</button>
+  </div>
+</div>
+
+<!-- Bug Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-zone-stripe" id="modalStripe"></div>
+    <h2 id="modalTitle">New Bug <span class="modal-zone-tag" id="modalZoneTag"></span></h2>
+    <div class="form-cols">
+      <div class="form-row" style="grid-column:1/-1">
+        <label>Title *</label>
+        <input type="text" id="fTitle" placeholder="Short bug title">
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Description</label>
+      <textarea id="fDesc" placeholder="Describe the bug…"></textarea>
+    </div>
+    <div class="form-cols">
+      <div class="form-row">
+        <label>Owner</label>
+        <input type="text" id="fOwner" placeholder="e.g. Alice, @bob" list="ownerSuggestions">
+        <datalist id="ownerSuggestions"></datalist>
+      </div>
+      <div class="form-row">
+        <label>Zone</label>
+        <select id="fZone" onchange="updateModalTheme()">
+          <option value="Production">Production</option>
+          <option value="Dev">Dev</option>
+          <option value="Test">Test</option>
+          <option value="Resolved">Resolved</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <label>Jira Ticket / URL</label>
+      <input type="text" id="fJira" placeholder="PROJ-123 or https://…">
+    </div>
+    <div class="form-row">
+      <label>Notes</label>
+      <textarea id="fNotes" placeholder="Workarounds, context…" style="min-height:52px"></textarea>
+    </div>
+    <div class="form-row">
+      <label>ETA for Bug Fix</label>
+      <input type="text" id="fEta" placeholder="e.g. 2026-05-30 · Next deployment · Waiting for backend fix">
+    </div>
+    <div class="form-row">
+      <!-- Bug Evidence Screenshots -->
+      <div class="ss-section">
+        <div class="ss-section-label ss-label-bug"><span class="ss-label-dot bug"></span>Bug Evidence Screenshots</div>
+        <div class="ss-gallery" id="bugSsGallery"></div>
+        <div class="ss-add-row">
+          <button type="button" class="ss-add-btn" onclick="triggerSsUpload('bug')">＋ Upload</button>
+          <span class="ss-add-hint">or Ctrl+V while focused below</span>
+          <input type="file" id="bugSsFileInput" accept="image/*" multiple style="display:none" onchange="handleSsFiles(event,'bug')">
+        </div>
+        <div style="margin-top:6px;">
+          <textarea id="bugSsPasteArea" placeholder="Click here then Ctrl+V to paste a bug screenshot…"
+            style="min-height:36px;resize:none;font-size:12px;color:var(--text-faint);width:100%;"
+            onfocus="activePasteTarget='bug'" onblur="activePasteTarget=null"></textarea>
+        </div>
+      </div>
+      <!-- Pass / Validation Screenshots -->
+      <div class="ss-section">
+        <div class="ss-section-label ss-label-pass"><span class="ss-label-dot pass"></span>Validation / Pass Evidence Screenshots</div>
+        <div class="ss-gallery" id="passSsGallery"></div>
+        <div class="ss-add-row">
+          <button type="button" class="ss-add-btn" onclick="triggerSsUpload('pass')">＋ Upload</button>
+          <span class="ss-add-hint">or Ctrl+V while focused below</span>
+          <input type="file" id="passSsFileInput" accept="image/*" multiple style="display:none" onchange="handleSsFiles(event,'pass')">
+        </div>
+        <div style="margin-top:6px;">
+          <textarea id="passSsPasteArea" placeholder="Click here then Ctrl+V to paste a validation screenshot…"
+            style="min-height:36px;resize:none;font-size:12px;color:var(--text-faint);width:100%;"
+            onfocus="activePasteTarget='pass'" onblur="activePasteTarget=null"></textarea>
+        </div>
+      </div>
+      <div class="storage-warning" id="storageWarning">⚠ Storage &gt;4 MB — consider removing old screenshots.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCard()">Save Bug</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm -->
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <h3 id="confirmTitle"></h3>
+    <p id="confirmMsg"></p>
+    <div class="confirm-btns">
+      <button class="btn btn-ghost" onclick="closeConfirm(false)">Cancel</button>
+      <button class="btn btn-danger" onclick="closeConfirm(true)">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <img id="lightboxImg" src="" alt="">
+</div>
+
+<!-- Toasts -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+/* ══ STATE ══ */
+const LS_KEY = 'bugzone_v2';
+const LS_EXP = 'bugzone_expanded';
+let bugs = [];
+let expandedCards = new Set();
+let editingId = null;
+let dragId = null;
+let confirmCallback = null;
+const ZONES = ['Production','Dev','Test','Resolved','Archive'];
+const MAIN_ZONES = ['Production','Dev','Test','Resolved']; // counted in summary
+const SORTED_ZONES = ['Production','Dev','Test'];          // zones affected by title sort
+const ZONE_ICONS = {Production:'●',Dev:'🟡',Test:'🔵',Resolved:'⚪',Archive:'📦'};
+const LS_SORT_DIR = 'bugzone_sort_dir';
+let sortDir = 'desc'; // 'desc' = Z→A (default, big→small), 'asc' = A→Z
+
+/* ══ EXPAND STATE ══ */
+function saveExpandState(){
+  try{ localStorage.setItem(LS_EXP, JSON.stringify([...expandedCards])); }catch(e){}
+}
+function loadExpandState(){
+  try{
+    const raw=localStorage.getItem(LS_EXP);
+    expandedCards = raw ? new Set(JSON.parse(raw)) : new Set();
+  }catch(e){ expandedCards=new Set(); }
+}
+
+/* ══ PERSIST ══ */
+function save(){
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(bugs)); }
+  catch(e){ toast('Storage full! Remove screenshots.','err'); }
+}
+
+function migrateBug(b){
+  // Guarantee all fields exist so cardHTML never crashes on old data
+  if(!b.history)         b.history=[];
+  if(!b.bugScreenshots)  b.bugScreenshots = b.screenshot ? [b.screenshot] : [];
+  if(!b.passScreenshots) b.passScreenshots=[];
+  if(b.screenshot)       delete b.screenshot; // promote legacy field
+  if(!b.owner)           b.owner='';
+  if(!b.eta)             b.eta='';
+  if(!b.notes)           b.notes='';
+  if(!b.description)     b.description='';
+  if(!b.jira)            b.jira='';
+  if(!b.zone)            b.zone='Production';
+  if(!b.createdAt)       b.createdAt=new Date().toISOString();
+  if(!b.updatedAt)       b.updatedAt=b.createdAt;
+  return b;
+}
+
+function load(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(!raw){
+      const old = localStorage.getItem('bugzone_v1');
+      if(old){
+        const parsed = JSON.parse(old);
+        bugs = parsed.map(b=>migrateBug({...b, owner: b.owner||''}));
+        save();
+        return;
+      }
+    }
+    bugs = raw ? JSON.parse(raw).map(migrateBug) : [];
+  }catch(e){ bugs=[]; }
+}
+
+/* ══ UTILS ══ */
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function fmtDate(iso){
+  const d=new Date(iso);
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})+' '+
+         d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+}
+function shortDate(iso){
+  const d=new Date(iso);
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+}
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function safeId(id){ return id.replace(/[^a-z0-9]/gi,'_'); }
+
+/* ══ NATURAL SORT (CPO-9 before CPO-10) ══ */
+const _natCollator = new Intl.Collator(undefined, {numeric:true, sensitivity:'base'});
+function naturalCompare(a, b){
+  return _natCollator.compare(a||'', b||'');
+}
+function sortByTitle(arr){
+  const sorted = arr.slice().sort((a,b)=> naturalCompare(a.title, b.title));
+  return sortDir==='desc' ? sorted.reverse() : sorted;
+}
+
+/* ══ SORT TOGGLE ══ */
+function toggleSort(){
+  sortDir = (sortDir==='desc') ? 'asc' : 'desc';
+  try{ localStorage.setItem(LS_SORT_DIR, sortDir); }catch(e){}
+  updateSortBtn();
+  renderBoard();
+}
+function updateSortBtn(){
+  const btn=document.getElementById('sortBtn');
+  if(!btn) return;
+  btn.textContent = sortDir==='desc' ? '↓ Title Z–A' : '↑ Title A–Z';
+}
+function initSort(){
+  const saved = localStorage.getItem(LS_SORT_DIR);
+  if(saved==='asc' || saved==='desc') sortDir = saved;
+  updateSortBtn();
+}
+
+function uniqueOwners(){
+  return [...new Set(bugs.map(b=>b.owner).filter(Boolean))].sort();
+}
+function refreshOwnerFilter(){
+  const sel = document.getElementById('ownerFilter');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">All Owners</option>';
+  uniqueOwners().forEach(o=>{
+    const opt=document.createElement('option');
+    opt.value=o; opt.textContent=o;
+    sel.appendChild(opt);
+  });
+  sel.value = cur;
+  // datalist
+  const dl = document.getElementById('ownerSuggestions');
+  dl.innerHTML = uniqueOwners().map(o=>`<option value="${esc(o)}">`).join('');
+}
+
+/* ══ ARCHIVE PANEL ══ */
+const LS_ARCHIVE_OPEN = 'bugzone_archive_open';
+function toggleArchive(){
+  const col=document.getElementById('col-Archive');
+  const btn=document.getElementById('archiveToggleBtn');
+  const willShow = col.style.display==='none';
+  col.style.display = willShow ? '' : 'none';
+  btn.classList.toggle('active', willShow);
+  try{ localStorage.setItem(LS_ARCHIVE_OPEN, willShow?'1':'0'); }catch(e){}
+}
+function initArchivePanel(){
+  const open = localStorage.getItem(LS_ARCHIVE_OPEN)==='1';
+  const col=document.getElementById('col-Archive');
+  const btn=document.getElementById('archiveToggleBtn');
+  col.style.display = open ? '' : 'none';
+  btn.classList.toggle('active', open);
+}
+
+/* ══ ZONE PICKER ══ */
+function openZonePicker(){
+  document.getElementById('zonePickerOverlay').classList.add('open');
+}
+function closeZonePicker(){
+  document.getElementById('zonePickerOverlay').classList.remove('open');
+}
+
+/* ══ MODAL ══ */
+function openModal(id, presetZone){
+  closeZonePicker();
+  editingId = id||null;
+
+  let zone = presetZone||'Production';
+
+  document.getElementById('fTitle').value='';
+  document.getElementById('fDesc').value='';
+  document.getElementById('fOwner').value='';
+  document.getElementById('fZone').value=zone;
+  document.getElementById('fJira').value='';
+  document.getElementById('fNotes').value='';
+  document.getElementById('fEta').value='';
+  initSsState(null);
+  checkStorageWarning();
+
+  if(id){
+    const bug=bugs.find(b=>b.id===id);
+    if(!bug) return;
+    zone=bug.zone;
+    document.getElementById('fTitle').value=bug.title;
+    document.getElementById('fDesc').value=bug.description||'';
+    document.getElementById('fOwner').value=bug.owner||'';
+    document.getElementById('fZone').value=bug.zone;
+    document.getElementById('fJira').value=bug.jira||'';
+    document.getElementById('fNotes').value=bug.notes||'';
+    document.getElementById('fEta').value=bug.eta||'';
+    initSsState(bug);
+  }
+
+  document.getElementById('modalTitle').childNodes[0].textContent = (id?'Edit Bug':'New Bug')+' ';
+  updateModalTheme();
+  document.getElementById('modalOverlay').classList.add('open');
+  setTimeout(()=>document.getElementById('fTitle').focus(),60);
+}
+
+function updateModalTheme(){
+  const zone = document.getElementById('fZone').value;
+  const stripe = document.getElementById('modalStripe');
+  const tag = document.getElementById('modalZoneTag');
+  stripe.className='modal-zone-stripe stripe-'+zone;
+  tag.className='modal-zone-tag mzt-'+zone;
+  tag.textContent=ZONE_ICONS[zone]+' '+zone;
+}
+
+function closeModal(){
+  document.getElementById('modalOverlay').classList.remove('open');
+  editingId=null;
+  pendingBugSS=[]; pendingPassSS=[];
+}
+
+function saveCard(){
+  const title=document.getElementById('fTitle').value.trim();
+  if(!title){ toast('Title required','err'); document.getElementById('fTitle').focus(); return; }
+
+  const now=new Date().toISOString();
+  const zone=document.getElementById('fZone').value;
+  const owner=document.getElementById('fOwner').value.trim();
+  const eta=document.getElementById('fEta').value.trim();
+
+  if(editingId){
+    const bug=bugs.find(b=>b.id===editingId);
+    const changes=[];
+    if(bug.zone!==zone) changes.push(`Moved ${bug.zone} → ${zone}`);
+    if(bug.owner!==owner) changes.push(`Owner changed to ${owner||'(none)'}`);
+    if(bug.title!==title) changes.push('Title updated');
+    if((bug.eta||'')!==eta) changes.push(`ETA changed to "${eta||'(none)'}"`);
+    const prevBugCount=(bug.bugScreenshots||[]).length+(bug.screenshot?1:0);
+    const prevPassCount=(bug.passScreenshots||[]).length;
+    if(pendingBugSS.length!==prevBugCount)  changes.push(`Bug screenshots updated (${pendingBugSS.length})`);
+    if(pendingPassSS.length!==prevPassCount) changes.push(`Validation screenshots updated (${pendingPassSS.length})`);
+
+    bug.title=title;
+    bug.description=document.getElementById('fDesc').value.trim();
+    bug.owner=owner;
+    bug.zone=zone;
+    bug.jira=document.getElementById('fJira').value.trim();
+    bug.notes=document.getElementById('fNotes').value.trim();
+    bug.eta=eta;
+    bug.updatedAt=now;
+    bug.bugScreenshots=[...pendingBugSS];
+    bug.passScreenshots=[...pendingPassSS];
+    delete bug.screenshot; // cleanly remove legacy field rather than setting undefined
+    bug.history.push({ts:now,action:changes.length?changes.join(' · '):'Card edited'});
+  } else {
+    bugs.push({
+      id:uid(), title, description:document.getElementById('fDesc').value.trim(),
+      owner, zone, jira:document.getElementById('fJira').value.trim(),
+      notes:document.getElementById('fNotes').value.trim(),
+      eta,
+      bugScreenshots:[...pendingBugSS],
+      passScreenshots:[...pendingPassSS],
+      createdAt:now, updatedAt:now,
+      history:[{ts:now,action:'Card created in '+zone}]
+    });
+  }
+
+  save(); closeModal(); renderBoard();
+  toast(editingId?'Bug updated':'Bug created','ok');
+}
+
+/* ══ DELETE / RESOLVE ══ */
+function deleteCard(id){
+  const bug=bugs.find(b=>b.id===id);
+  showConfirm('Delete Bug?',`"${bug.title}" will be permanently deleted.`,()=>{
+    bugs=bugs.filter(b=>b.id!==id);
+    expandedCards.delete(id); saveExpandState();
+    save(); renderBoard(); toast('Deleted','ok');
+  });
+}
+
+function resolveCard(id){
+  const bug=bugs.find(b=>b.id===id);
+  if(bug.zone==='Resolved'){ deleteCard(id); return; }
+  const now=new Date().toISOString();
+  bug.history.push({ts:now,action:`Resolved — moved from ${bug.zone}`});
+  bug.zone='Resolved'; bug.updatedAt=now;
+  save(); renderBoard(); toast('Moved to Resolved','ok');
+}
+
+/* ══ COPY TO ZONE ══ */
+function copyToZone(id, targetZone){
+  closeAllCopyMenus();
+  const src=bugs.find(b=>b.id===id);
+  if(!src) return;
+  const now=new Date().toISOString();
+  const copy={
+    ...JSON.parse(JSON.stringify(src)),
+    id:uid(), zone:targetZone,
+    createdAt:now, updatedAt:now,
+    history:[
+      {ts:now,action:`Copied from ${src.zone} → ${targetZone}`}
+    ]
+  };
+  bugs.push(copy);
+  save(); renderBoard();
+  toast(`Copied to ${targetZone}`,'ok');
+}
+
+function toggleCopyMenu(id, e){
+  e.stopPropagation();
+  const menu=document.getElementById('copy-menu-'+id);
+  const isOpen=menu.classList.contains('open');
+  closeAllCopyMenus();
+  if(!isOpen) menu.classList.add('open');
+}
+function closeAllCopyMenus(){
+  document.querySelectorAll('.copy-menu.open').forEach(m=>m.classList.remove('open'));
+}
+
+/* ══ DRAG & DROP ══ */
+function onDragStart(e,id){ dragId=id; setTimeout(()=>document.getElementById('card-'+id)?.classList.add('dragging'),0); }
+function onDragEnd(e,id){ document.getElementById('card-'+id)?.classList.remove('dragging'); dragId=null; }
+function onDragOver(e,zone){ e.preventDefault(); document.getElementById('body-'+zone)?.classList.add('drag-over'); }
+function onDragLeave(e,zone){ document.getElementById('body-'+zone)?.classList.remove('drag-over'); }
+function onDrop(e,zone){
+  e.preventDefault();
+  document.getElementById('body-'+zone)?.classList.remove('drag-over');
+  if(!dragId) return;
+  const bug=bugs.find(b=>b.id===dragId);
+  if(!bug||bug.zone===zone) return;
+  const now=new Date().toISOString();
+  bug.history.push({ts:now,action:`Dragged ${bug.zone} → ${zone}`});
+  bug.zone=zone; bug.updatedAt=now;
+  save(); renderBoard(); toast(`Moved to ${zone}`,'ok');
+}
+
+/* ══ SCREENSHOT — multi-image ══ */
+let pendingBugSS  = [];   // array of base64 strings
+let pendingPassSS = [];
+let activePasteTarget = null;  // 'bug' | 'pass' | null
+
+function triggerSsUpload(type){
+  document.getElementById(type==='bug'?'bugSsFileInput':'passSsFileInput').click();
+}
+
+function handleSsFiles(e, type){
+  const files=[...e.target.files];
+  if(!files.length) return;
+  let remaining=files.length;
+  files.forEach(f=>{
+    const r=new FileReader();
+    r.onload=ev=>{
+      if(type==='bug') pendingBugSS.push(ev.target.result);
+      else             pendingPassSS.push(ev.target.result);
+      remaining--;
+      if(!remaining){ renderSsGalleries(); checkStorageWarning(); }
+    };
+    r.readAsDataURL(f);
+  });
+  e.target.value='';
+}
+
+document.addEventListener('paste',function(e){
+  if(!document.getElementById('modalOverlay').classList.contains('open')) return;
+  const items=e.clipboardData?.items;
+  if(!items) return;
+  const target = activePasteTarget || 'bug'; // default to bug if nothing focused
+  for(let item of items){
+    if(item.type.startsWith('image/')){
+      const reader=new FileReader();
+      reader.onload=ev=>{
+        if(target==='bug') pendingBugSS.push(ev.target.result);
+        else               pendingPassSS.push(ev.target.result);
+        renderSsGalleries();
+        checkStorageWarning();
+      };
+      reader.readAsDataURL(item.getAsFile());
+      break;
+    }
+  }
+});
+
+function renderSsGalleries(){
+  renderOneSsGallery('bugSsGallery',  pendingBugSS,  'bug');
+  renderOneSsGallery('passSsGallery', pendingPassSS, 'pass');
+}
+
+function renderOneSsGallery(galleryId, arr, type){
+  const el=document.getElementById(galleryId);
+  if(!el) return;
+  // Build HTML without any inline onclick (avoids base64 string injection issues)
+  el.innerHTML = arr.map((src,i)=>`
+    <div class="ss-thumb-wrap">
+      <img src="${src}" alt="ss ${i+1}">
+      <button class="ss-thumb-del" data-type="${type}" data-idx="${i}" title="Remove">✕</button>
+    </div>
+  `).join('');
+  // Attach events via JS — safe, no string injection
+  el.querySelectorAll('.ss-thumb-wrap').forEach((wrap, i)=>{
+    wrap.querySelector('img').addEventListener('click', ev=>{ ev.stopPropagation(); openLightbox(arr[i]); });
+    wrap.querySelector('.ss-thumb-del').addEventListener('click', ev=>{ ev.stopPropagation(); removeSs(type, i, ev); });
+  });
+}
+
+function removeSs(type, idx, e){
+  e.stopPropagation();
+  if(type==='bug')  pendingBugSS.splice(idx,1);
+  else              pendingPassSS.splice(idx,1);
+  renderSsGalleries();
+}
+
+function initSsState(bug){
+  // Migrate old single screenshot → bugScreenshots
+  pendingBugSS  = bug ? (bug.bugScreenshots || (bug.screenshot?[bug.screenshot]:[])) : [];
+  pendingPassSS = bug ? (bug.passScreenshots || []) : [];
+  renderSsGalleries();
+}
+
+function checkStorageWarning(){
+  const raw=localStorage.getItem(LS_KEY)||'';
+  document.getElementById('storageWarning').classList.toggle('show', raw.length>4*1024*1024);
+}
+
+/* ══ FILTER ══ */
+function getFiltered(){
+  const q=document.getElementById('searchInput').value.toLowerCase().trim();
+  const owner=document.getElementById('ownerFilter').value;
+  const zone=document.getElementById('zoneFilter').value;
+  return bugs.filter(b=>{
+    if(owner && b.owner!==owner) return false;
+    if(zone  && b.zone!==zone)   return false;
+    if(q){
+      const hay=([b.title,b.description,b.notes,b.jira,b.owner].map(v=>v||'').join(' ')).toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+function clearFilters(){
+  document.getElementById('searchInput').value='';
+  document.getElementById('ownerFilter').value='';
+  document.getElementById('zoneFilter').value='';
+  renderBoard();
+}
+
+/* ══ RENDER ══ */
+function renderBoard(){
+  refreshOwnerFilter();
+  updateImportBanner();
+  const filtered=getFiltered();
+  const counts={Production:0,Dev:0,Test:0,Resolved:0,Archive:0};
+  bugs.forEach(b=> counts[b.zone]=(counts[b.zone]||0)+1);
+
+  // Summary (main zones only — Archive shown separately on its column)
+  const sb=document.getElementById('summaryBar');
+  sb.innerHTML=`
+    <div class="summary-pill pill-prod"><span class="num">${counts.Production}</span> Production</div>
+    <div class="summary-pill pill-dev"> <span class="num">${counts.Dev}</span> Dev</div>
+    <div class="summary-pill pill-test"><span class="num">${counts.Test}</span> Test</div>
+    <div class="summary-pill pill-res"> <span class="num">${counts.Resolved}</span> Resolved</div>
+  `;
+
+  ZONES.forEach(zone=>{
+    const body=document.getElementById('body-'+zone);
+    const cnt=document.getElementById('cnt-'+zone);
+    if(!body) return;
+    if(cnt) cnt.textContent=counts[zone]||0;
+    const inZone = filtered.filter(b=>b.zone===zone);
+    // Production / Dev / Test → sort by title (natural). Resolved / Archive → by last updated.
+    const zoneBugs = SORTED_ZONES.includes(zone)
+      ? sortByTitle(inZone)
+      : inZone.slice().sort((a,b)=>new Date(b.updatedAt)-new Date(a.updatedAt));
+    if(!zoneBugs.length){
+      const emptyMsg = zone==='Resolved' ? 'Nothing resolved yet'
+                     : zone==='Archive'  ? 'Drag outdated resolved bugs here 📦'
+                     : 'No bugs here 🎉';
+      body.innerHTML=`<div class="empty-col">${emptyMsg}</div>`;
+      return;
+    }
+    body.innerHTML=zoneBugs.map(b=>cardHTML(b)).join('');
+    zoneBugs.forEach(bug=>{
+      const el=document.getElementById('card-'+bug.id);
+      el.addEventListener('dragstart',e=>onDragStart(e,bug.id));
+      el.addEventListener('dragend',  e=>onDragEnd(e,bug.id));
+      // Wire screenshot lightbox clicks
+      const bugSS  = bug.bugScreenshots  || (bug.screenshot ? [bug.screenshot] : []);
+      const passSS = bug.passScreenshots || [];
+      el.querySelectorAll('img[data-bugss]').forEach(img=>{
+        const idx=parseInt(img.dataset.idx);
+        img.onclick=ev=>{ ev.stopPropagation(); openLightbox(bugSS[idx]); };
+      });
+      el.querySelectorAll('img[data-passs]').forEach(img=>{
+        const idx=parseInt(img.dataset.idx);
+        img.onclick=ev=>{ ev.stopPropagation(); openLightbox(passSS[idx]); };
+      });
+    });
+  });
+}
+
+function cardHTML(bug){
+  const isExp = expandedCards.has(bug.id);
+  const otherZones=ZONES.filter(z=>z!==bug.zone&&z!=='Resolved'&&z!=='Archive');
+  const copyMenuItems=otherZones.map(z=>
+    `<button onclick="copyToZone('${bug.id}','${z}');event.stopPropagation()">${ZONE_ICONS[z]} Copy to ${z}</button>`
+  ).join('');
+
+  // Normalize screenshot arrays (migrate legacy single screenshot)
+  const bugSS  = bug.bugScreenshots  || (bug.screenshot ? [bug.screenshot] : []);
+  const passSS = bug.passScreenshots || [];
+
+  // ── Collapsed: description clamped ──
+  const descCollapsed = bug.description
+    ? `<div class="card-desc-collapsed">${esc(bug.description)}</div>` : '';
+
+  // ── Collapsed: owner / eta chips ──
+  const quickParts=[];
+  if(bug.owner) quickParts.push(`<span class="qchip"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg> ${esc(bug.owner)}</span>`);
+  if(bug.eta)   quickParts.push(`<span class="qchip qchip-eta">⏱ Bug Fix ETA: ${esc(bug.eta)}</span>`);
+  const quickStrip = quickParts.length
+    ? `<div class="card-quick">${quickParts.join('<span style="color:var(--text-faint);padding:0 2px;">·</span>')}</div>` : '';
+
+  // ── Collapsed: screenshot count badge (removed per user request) ──
+  const ssBadgeRow = '';
+
+  // ── Description shown once (top of card); un-clamps when expanded ──
+
+  // ── Expanded: bug screenshots section ──
+  // We'll use data-index and attach events after render
+  const bugThumbsHTML = bugSS.map((src,i)=>
+    `<img data-bugss="${bug.id}" data-idx="${i}" src="${src}" alt="bug ${i+1}" title="Bug screenshot ${i+1}">`
+  ).join('');
+  const bugSsSection = `
+    <div class="card-ss-section">
+      <div class="card-ss-label bug-lbl">
+        <span style="width:6px;height:6px;border-radius:50%;background:#ffffff;display:inline-block;flex-shrink:0;"></span>
+        Bug Evidence (${bugSS.length})
+      </div>
+      ${bugSS.length
+        ? `<div class="card-ss-gallery" id="bugss-${bug.id}">${bugThumbsHTML}</div>`
+        : `<div style="font-size:11px;color:var(--text-faint);padding:2px 0;">No bug screenshots</div>`}
+    </div>`;
+
+  // ── Expanded: pass screenshots section ──
+  const passThumbsHTML = passSS.map((src,i)=>
+    `<img data-passs="${bug.id}" data-idx="${i}" src="${src}" alt="pass ${i+1}" title="Validation screenshot ${i+1}">`
+  ).join('');
+  const passSsSection = `
+    <div class="card-ss-section">
+      <div class="card-ss-label pass-lbl">
+        <span style="width:6px;height:6px;border-radius:50%;background:#3a9e5c;display:inline-block;flex-shrink:0;"></span>
+        Validation / Pass Evidence (${passSS.length})
+      </div>
+      ${passSS.length
+        ? `<div class="card-ss-gallery" id="passss-${bug.id}">${passThumbsHTML}</div>`
+        : `<div style="font-size:11px;color:var(--text-faint);padding:2px 0;">No validation screenshots</div>`}
+    </div>`;
+
+  // ── Expanded: meta + history ──
+  const jiraHTML=bug.jira
+    ?(bug.jira.startsWith('http')
+      ?`<a class="meta-chip" href="${esc(bug.jira)}" target="_blank">🔗 ${esc(bug.jira.length>22?bug.jira.slice(0,22)+'…':bug.jira)}</a>`
+      :`<span class="meta-chip">🎫 ${esc(bug.jira)}</span>`)
+    :'';
+  const notesHTML=bug.notes
+    ?`<span class="meta-chip" style="max-width:100%;word-break:break-word;white-space:normal;">📝 ${esc(bug.notes)}</span>`:'';
+  const histHTML=bug.history.slice().reverse().map(h=>
+    `<div class="history-item"><span class="hts">${fmtDate(h.ts)}</span>${esc(h.action)}</div>`
+  ).join('');
+
+  const resolveLabel=bug.zone==='Resolved'?'🗑':'✓';
+  const resolveTitle=bug.zone==='Resolved'?'Delete':'Resolve';
+
+  return `
+<div class="card zone-${bug.zone}${isExp?' expanded':''}" id="card-${bug.id}" draggable="true">
+  <div class="card-header" onclick="toggleExpand('${bug.id}',event)">
+    <div class="card-title">${esc(bug.title)}</div>
+    <span class="expand-chevron">▾</span>
+  </div>
+
+  ${descCollapsed}
+  ${quickParts.length ? quickStrip : ''}
+  ${ssBadgeRow}
+
+  <div class="card-quick-actions">
+    <button onclick="openModal('${bug.id}');event.stopPropagation()">✏ Edit</button>
+    <button class="resolve" onclick="resolveCard('${bug.id}');event.stopPropagation()" title="${resolveTitle}">${resolveLabel}</button>
+    <div class="copy-wrap">
+      <button onclick="toggleCopyMenu('${bug.id}',event)">⎘ Copy</button>
+      <div class="copy-menu" id="copy-menu-${bug.id}">
+        ${copyMenuItems}
+        ${bug.zone!=='Resolved'?`<button onclick="copyToZone('${bug.id}','Resolved');event.stopPropagation()">⚪ Copy to Resolved</button>`:''}
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <button class="del" onclick="deleteCard('${bug.id}');event.stopPropagation()">✕</button>
+  </div>
+
+  <div class="card-detail">
+    <div style="border-top:1px solid var(--border);margin-bottom:10px;"></div>
+    ${bugSsSection}
+    ${passSsSection}
+    <div class="card-meta" style="margin-top:8px;">${jiraHTML}${notesHTML}</div>
+    <div class="card-dates">Created ${shortDate(bug.createdAt)} · Updated ${shortDate(bug.updatedAt)}</div>
+    <button class="history-toggle" onclick="toggleHistory('${bug.id}',event)">▸ History (${bug.history.length})</button>
+    <div class="history-list" id="hist-${bug.id}">${histHTML}</div>
+  </div>
+</div>`;
+}
+
+function toggleExpand(id, e){
+  if(e) e.stopPropagation();
+  const el=document.getElementById('card-'+id);
+  if(!el) return;
+  if(el.classList.toggle('expanded')){
+    expandedCards.add(id);
+  } else {
+    expandedCards.delete(id);
+  }
+  saveExpandState();
+}
+
+function toggleHistory(id, e){
+  if(e) e.stopPropagation();
+  const el=document.getElementById('hist-'+id);
+  const btn=el.previousElementSibling;
+  const open=el.classList.toggle('open');
+  btn.textContent=`${open?'▾':'▸'} History (${bugs.find(b=>b.id===id)?.history.length||0})`;
+}
+
+function openLightbox(src){
+  document.getElementById('lightboxImg').src=src;
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox(){ document.getElementById('lightbox').classList.remove('open'); }
+
+/* ══ EXPORT / IMPORT ══ */
+function exportJSON(){
+  const data=JSON.stringify({version:2,exportedAt:new Date().toISOString(),bugs},null,2);
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([data],{type:'application/json'}));
+  a.download=`bugzone-${Date.now()}.json`;
+  a.click();
+  toast(`Exported ${bugs.length} bug(s). Import this file into your local copy to transfer data.`,'ok');
+}
+
+/* ══ IMPORT BANNER ══ */
+function updateImportBanner(){
+  const banner=document.getElementById('importBanner');
+  if(!banner) return;
+  const dismissed = sessionStorage.getItem('bugzone_banner_dismissed')==='1';
+  // Show only when board is empty and the user hasn't dismissed it this session
+  banner.style.display = (bugs.length===0 && !dismissed) ? 'block' : 'none';
+}
+function dismissImportBanner(){
+  try{ sessionStorage.setItem('bugzone_banner_dismissed','1'); }catch(e){}
+  updateImportBanner();
+}
+function importJSON(e){
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const data=JSON.parse(ev.target.result);
+      if(!Array.isArray(data.bugs)) throw new Error();
+      const incoming = data.bugs.map(migrateBug);
+
+      if(bugs.length===0){
+        // Empty board — just load directly, no need to warn
+        bugs = incoming;
+        save(); renderBoard();
+        toast(`Imported ${bugs.length} bug(s)`,'ok');
+      } else {
+        // Board already has data — let the user choose
+        showConfirm('Import Data?',
+          `Your board has ${bugs.length} card(s). Import will MERGE ${incoming.length} card(s), keeping both sets (duplicates by ID are skipped). Continue?`,
+          ()=>{
+            const existingIds = new Set(bugs.map(b=>b.id));
+            let added=0;
+            incoming.forEach(b=>{
+              if(existingIds.has(b.id)){
+                // give imported duplicate a fresh id so nothing is lost
+                b.id = uid();
+              }
+              bugs.push(b); added++;
+            });
+            save(); renderBoard();
+            toast(`Merged ${added} bug(s) — total ${bugs.length}`,'ok');
+          }
+        );
+      }
+    }catch{ toast('Invalid JSON','err'); }
+    e.target.value='';
+  };
+  reader.readAsText(file);
+}
+
+/* ══ CONFIRM ══ */
+function showConfirm(title,msg,cb){
+  document.getElementById('confirmTitle').textContent=title;
+  document.getElementById('confirmMsg').textContent=msg;
+  confirmCallback=cb;
+  document.getElementById('confirmOverlay').classList.add('open');
+}
+function closeConfirm(yes){
+  document.getElementById('confirmOverlay').classList.remove('open');
+  if(yes&&confirmCallback) confirmCallback();
+  confirmCallback=null;
+}
+
+/* ══ TOAST ══ */
+function toast(msg,type='ok'){
+  const el=document.createElement('div');
+  el.className=`toast ${type}`;
+  el.textContent=msg;
+  document.getElementById('toastWrap').appendChild(el);
+  setTimeout(()=>el.remove(),3200);
+}
+
+/* ══ KEYBOARD ══ */
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    closeLightbox(); closeModal();
+    closeZonePicker(); closeConfirm(false);
+    closeAllCopyMenus();
+  }
+});
+document.addEventListener('click', closeAllCopyMenus);
+document.getElementById('modalOverlay').addEventListener('click',e=>{ if(e.target===e.currentTarget) closeModal(); });
+document.getElementById('zonePickerOverlay').addEventListener('click',e=>{ if(e.target===e.currentTarget) closeZonePicker(); });
+
+/* ══ INIT ══ */
+load();
+loadExpandState();
+initArchivePanel();
+initSort();
+renderBoard();
+</script>
+</body>
+</html>
