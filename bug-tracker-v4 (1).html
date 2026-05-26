@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bug Reports / CPOchat — Matrix View</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0d0f18; --surface:#13161f; --surface2:#181c2a; --surface3:#1e2338;
+  --border:#252c42; --text:#e2e8f8; --text-dim:#7888aa; --text-faint:#33405a;
+  --prod:#FF4DA6; --prod-bg:#1f0815; --prod-dim:#2d0f1e; --prod-glow:rgba(255,77,166,.22); --prod-border:#4a1530;
+  --dev:#F5A623; --dev-bg:#1c1204; --dev-dim:#281a06; --dev-glow:rgba(245,166,35,.18); --dev-border:#3d2a08;
+  --test:#38BDF8; --test-bg:#041420; --test-dim:#071c2e; --test-glow:rgba(56,189,248,.18); --test-border:#0a2a40;
+  --pass:#3a9e5c; --pass-bg:rgba(58,158,92,.10); --pass-border:rgba(58,158,92,.4);
+  --accent:#6366f1; --accent-glow:rgba(99,102,241,.3); --accent-bright:#6366f1;
+  --radius:10px; --mono:'Courier New',monospace;
+}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* Header */
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;display:flex;align-items:center;gap:14px;height:54px;position:sticky;top:0;z-index:200;box-shadow:0 2px 20px rgba(0,0,0,.5);}
+.logo{font-size:17px;font-weight:800;letter-spacing:-.6px;display:flex;align-items:center;gap:9px;}
+.logo em{font-style:normal;color:var(--text-dim);font-weight:400;font-size:14px;}
+.logo-bug{flex-shrink:0;filter:drop-shadow(0 0 5px rgba(95,208,104,0.45));}
+.htools{margin-left:auto;display:flex;gap:7px;align-items:center;}
+
+/* Toolbar */
+.toolbar{padding:10px 20px;display:flex;gap:8px;align-items:center;background:var(--surface);border-bottom:1px solid var(--border);flex-wrap:wrap;}
+input[type=text],select,textarea{background:var(--surface3);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:6px 10px;font-size:13px;outline:none;transition:border-color .15s,box-shadow .15s;}
+input[type=text]:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow);}
+select option{background:var(--surface2);}
+#searchInput{width:200px;}
+.owner-multi{position:relative;display:inline-block;}
+.owner-multi-btn{background:var(--surface3);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:6px 12px;font-size:13px;cursor:pointer;transition:border-color .15s;min-width:120px;text-align:left;}
+.owner-multi-btn:hover{border-color:var(--accent);}
+.owner-multi-btn.active{border-color:var(--accent);color:var(--text);}
+.owner-panel{position:absolute;top:calc(100% + 4px);left:0;z-index:150;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:6px;min-width:200px;box-shadow:0 8px 28px rgba(0,0,0,.6);display:none;flex-direction:column;max-height:320px;}
+.owner-panel.open{display:flex;}
+.panel-search{width:100%;background:var(--surface3);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:5px 9px;font-size:12px;outline:none;margin-bottom:5px;flex-shrink:0;}
+.panel-search:focus{border-color:var(--accent);}
+.panel-options{overflow-y:auto;flex:1;}
+.panel-no-match{font-size:12px;color:var(--text-faint);padding:8px 9px;}
+.owner-opt{display:flex;align-items:center;gap:8px;padding:6px 9px;border-radius:6px;font-size:13px;color:var(--text);cursor:pointer;user-select:none;transition:background .12s;}
+.owner-opt:hover{background:var(--surface3);}
+.owner-opt input{accent-color:var(--accent);width:14px;height:14px;cursor:pointer;}
+.owner-panel-empty{font-size:12px;color:var(--text-faint);padding:8px 9px;}
+.owner-panel-actions{display:flex;justify-content:flex-end;border-top:1px solid var(--border);margin-top:4px;padding-top:6px;}
+.owner-panel-actions button{background:none;border:none;color:var(--text-dim);font-size:12px;cursor:pointer;padding:3px 8px;border-radius:5px;}
+.owner-panel-actions button:hover{color:var(--text);background:var(--surface3);}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:hover{background:#4f52d9;box-shadow:0 0 12px var(--accent-glow);}
+.btn-sm{padding:5px 11px;font-size:12px;}
+.btn-ghost{background:var(--surface3);color:var(--text-dim);border:1px solid var(--border);}
+.btn-ghost:hover{color:var(--text);border-color:var(--accent);}
+.btn-danger{background:#2d0a0a;color:var(--prod);border:1px solid #4a1515;}
+.btn-danger:hover{background:#4a1515;}
+.btn-clear{background:transparent;color:var(--text-dim);border:1px solid var(--border);font-size:12px;padding:5px 10px;}
+.btn-clear:hover{color:var(--text);border-color:var(--text-dim);}
+
+/* Summary */
+.summary-bar{padding:8px 20px;display:flex;gap:10px;flex-wrap:wrap;background:var(--surface);border-bottom:1px solid var(--border);font-size:12px;color:var(--text-dim);align-items:center;}
+.summary-pill{display:flex;align-items:center;gap:7px;padding:5px 14px;border-radius:20px;font-weight:600;border:1px solid var(--border);background:var(--surface2);}
+.summary-pill .num{font-size:15px;font-weight:800;color:var(--text);}
+.summary-pill.pass-pill{background:var(--surface2);border-color:var(--border);color:var(--pass);}
+.summary-pill.pass-pill .num{color:var(--pass);}
+.summary-pill.arc-entry{cursor:pointer;background:var(--surface2);border-color:var(--border);color:#c9a989;transition:all .15s;}
+.summary-pill.arc-entry:hover{border-color:#c9a989;}
+.summary-pill.arc-entry .num{color:#c9a989;}
+.summary-pill.arc-current{background:var(--surface2);border-color:var(--border);color:#c9a989;}
+.summary-pill.arc-current .num{color:#c9a989;}
+.summary-pill.back-entry{cursor:pointer;background:var(--surface3);color:var(--text-dim);transition:all .15s;}
+.summary-pill.back-entry:hover{color:var(--text);border-color:var(--accent);}
+.summary-pill.delall-entry{cursor:pointer;background:var(--surface2);border-color:var(--border);color:var(--prod);transition:all .15s;font-weight:700;}
+.summary-pill.delall-entry:hover{background:#2d0a0a;border-color:var(--prod);}
+.ready-badge{display:inline-flex;align-items:center;font-size:11px;font-weight:700;color:var(--pass);background:var(--pass-bg);border:1px solid var(--pass-border);border-radius:5px;padding:3px 9px;}
+.info-actions{align-items:center;}
+.info-actions button.moveback{color:var(--accent);border-color:var(--accent);}
+.info-actions button.moveback:hover{background:var(--accent);color:#fff;}
+
+/* Matrix table */
+.matrix-wrap{padding:0 20px 60px;overflow-x:auto;}
+.matrix{width:100%;border-collapse:separate;border-spacing:0 10px;min-width:900px;table-layout:fixed;}
+.matrix thead th{
+  text-align:left;font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;
+  color:var(--text-dim);padding:14px 14px 10px;position:sticky;top:54px;
+  background:var(--bg);border-bottom:2px solid var(--border);z-index:10;
+}
+.matrix thead th:first-child{padding-left:16px;}
+.col-h-test{color:var(--test);}
+.col-h-dev{color:var(--dev);}
+.col-h-prod{color:var(--prod);}
+.th-env{display:flex;align-items:center;gap:6px;}
+.th-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.th-dot.test{background:var(--test);} .th-dot.dev{background:var(--dev);} .th-dot.prod{background:var(--prod);}
+/* spacer so first row doesn't hug the header underline */
+.matrix tbody::before{content:'';display:block;height:6px;}
+
+/* Bug row */
+.bug-row{background:var(--surface2);transition:background .2s;}
+.bug-row > td{border-top:1px solid var(--border);border-bottom:1px solid var(--border);vertical-align:top;padding:14px 16px;}
+.bug-row > td:first-child{border-left:1px solid var(--border);border-radius:9px 0 0 9px;border-left-width:3px;border-left-color:var(--accent-bright);}
+.bug-row > td:last-child{border-right:1px solid var(--border);border-radius:0 9px 9px 0;}
+/* vertical dividers separating the four columns */
+.bug-row > td:not(:last-child){border-right:1px solid var(--border);}
+.bug-row:hover > td{background:rgba(255,255,255,.012);}
+.bug-row.all-passed{background:var(--pass-bg);}
+.bug-row.all-passed > td:first-child{border-left-color:var(--pass);}
+.bug-row.all-passed > td{border-color:var(--pass-border);}
+
+/* Left info cell */
+.bug-id{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--accent-bright);letter-spacing:.5px;display:inline-block;background:var(--surface3);border:1px solid var(--border);border-radius:5px;padding:2px 8px;}
+.bug-row.all-passed .bug-id{color:var(--pass);border-color:var(--pass-border);}
+.bug-title{font-size:14px;font-weight:700;color:var(--text);margin-top:8px;line-height:1.35;overflow-wrap:anywhere;word-break:break-word;}
+.bug-desc{font-size:12px;color:#ffffff;line-height:1.5;margin-top:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;opacity:.82;overflow-wrap:anywhere;word-break:break-word;}
+.bug-row.expanded .bug-desc{-webkit-line-clamp:unset;display:block;overflow:visible;}
+.bug-solution{font-size:12px;color:#ffffff;line-height:1.5;margin-top:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;opacity:.82;overflow-wrap:anywhere;word-break:break-word;}
+.bug-row.expanded .bug-solution{-webkit-line-clamp:unset;display:block;overflow:visible;}
+.bug-solution .sol-label{color:#ffffff;font-weight:700;}
+.bug-solution .sol-icon{vertical-align:-2px;margin-right:3px;}
+.bug-owner{font-size:11px;color:var(--text-dim);margin-top:8px;display:flex;align-items:center;gap:4px;}
+.info-actions{display:flex;gap:5px;margin-top:9px;flex-wrap:wrap;}
+.info-actions button{background:none;border:1px solid var(--border);color:var(--text-dim);border-radius:5px;padding:3px 8px;font-size:11px;cursor:pointer;transition:all .12s;}
+.info-actions button:hover{background:var(--surface);color:var(--text);}
+.info-actions button.del:hover{color:var(--prod);border-color:var(--prod);}
+.expand-chevron{font-size:14px;color:var(--text-dim);width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:var(--surface3);border:1px solid var(--border);cursor:pointer;transition:transform .22s ease,color .15s,border-color .15s;}
+.bug-row.expanded .expand-chevron{transform:rotate(180deg);color:var(--accent);border-color:var(--accent);}
+
+/* Env cell */
+.env-cell{width:auto;overflow-wrap:anywhere;}
+.env-eta{font-size:12px;color:var(--text-dim);margin-bottom:8px;line-height:1.4;}
+.env-eta .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-faint);display:block;margin-bottom:2px;}
+.env-eta .val{color:var(--text);}
+.pass-check{display:inline-flex;align-items:center;gap:7px;cursor:pointer;font-size:12px;user-select:none;padding:4px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);transition:all .15s;}
+.pass-check:hover{border-color:var(--pass-border);}
+.pass-check.checked{background:var(--pass-bg);border-color:var(--pass-border);color:var(--pass);font-weight:600;}
+.pass-box{width:15px;height:15px;border-radius:4px;border:1.5px solid var(--text-faint);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;font-size:11px;}
+.pass-check.checked .pass-box{background:var(--pass);border-color:var(--pass);color:#fff;}
+
+/* Expanded detail in env cell */
+.env-detail{display:none;margin-top:10px;}
+.bug-row.expanded .env-detail{display:block;}
+.env-ss{margin-top:10px;}
+.ss-block{margin-top:8px;}
+.ss-block-lbl{font-size:9px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;margin-bottom:4px;display:flex;align-items:center;gap:4px;}
+.ss-block-lbl.bug-l{color:rgba(255,255,255,.55);}
+.ss-block-lbl.pass-l{color:var(--pass);}
+.ss-thumbs{display:flex;flex-wrap:wrap;gap:4px;}
+.ss-thumbs img{width:54px;height:40px;object-fit:cover;border-radius:4px;border:1px solid var(--border);cursor:zoom-in;transition:opacity .15s;}
+.ss-thumbs img:hover{opacity:.8;}
+.env-detail .empty-ss{font-size:10px;color:var(--text-faint);}
+
+/* Expanded shared detail (notes + history) under info cell */
+.shared-detail{display:none;margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);}
+.bug-row.expanded .shared-detail{display:block;}
+.detail-chip{font-size:11px;color:var(--text-dim);background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:3px 8px;display:inline-flex;align-items:center;gap:4px;margin:2px 3px 2px 0;word-break:break-word;}
+a.detail-chip:hover{color:var(--accent);border-color:var(--accent);}
+.history-toggle{font-size:11px;color:var(--text-faint);cursor:pointer;background:none;border:none;padding:0;margin-top:8px;display:flex;align-items:center;gap:4px;}
+.history-toggle:hover{color:var(--accent);}
+.history-list{margin-top:6px;display:none;flex-direction:column;gap:3px;}
+.history-list.open{display:flex;}
+.history-item{font-size:11px;color:var(--text-dim);padding:3px 0;border-bottom:1px solid var(--border);line-height:1.4;}
+.history-item:last-child{border-bottom:none;}
+.hts{font-family:var(--mono);font-size:10px;color:var(--text-faint);display:block;}
+
+.empty-state{text-align:center;padding:60px 20px;color:var(--text-faint);font-size:14px;}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.78);display:none;align-items:center;justify-content:center;z-index:300;backdrop-filter:blur(5px);}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;width:720px;max-width:96vw;max-height:92vh;overflow-y:auto;padding:26px;box-shadow:0 24px 80px rgba(0,0,0,.7);}
+.modal h2{font-size:18px;font-weight:700;margin-bottom:18px;}
+.form-row{margin-bottom:13px;}
+.form-row label{display:block;font-size:11px;font-weight:700;color:var(--text-dim);margin-bottom:5px;letter-spacing:.3px;text-transform:uppercase;}
+.form-row input[type=text],.form-row textarea{width:100%;}
+.form-row textarea{resize:vertical;min-height:58px;font-family:inherit;}
+.form-cols{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.env-editor{border:1px solid var(--border);border-radius:9px;padding:14px;margin-bottom:12px;}
+.env-editor.test-ed{border-color:var(--test-border);}
+.env-editor.dev-ed{border-color:var(--dev-border);}
+.env-editor.prod-ed{border-color:var(--prod-border);}
+.env-editor h3{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;display:flex;align-items:center;gap:7px;}
+.env-editor.test-ed h3{color:var(--test);}
+.env-editor.dev-ed h3{color:var(--dev);}
+.env-editor.prod-ed h3{color:var(--prod);}
+.env-editor .th-dot{width:9px;height:9px;}
+.pass-toggle-row{display:flex;align-items:center;gap:9px;margin:10px 0;}
+.ss-mini-section{margin-top:10px;}
+.ss-mini-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;color:var(--text-dim);}
+.ss-mini-gallery{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;}
+.ss-mini-wrap{position:relative;border:1px solid var(--border);border-radius:5px;overflow:hidden;}
+.ss-mini-wrap img{width:60px;height:44px;object-fit:cover;display:block;}
+.ss-mini-del{position:absolute;top:2px;right:2px;background:rgba(0,0,0,.75);color:var(--prod);border:none;border-radius:3px;font-size:10px;padding:0 5px;cursor:pointer;}
+.ss-add-btn{background:var(--surface3);border:1px dashed var(--border);color:var(--text-dim);border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;}
+.ss-add-btn:hover{border-color:var(--accent);color:var(--text);}
+.ss-paste{width:100%;min-height:30px;resize:none;font-size:11px;color:var(--text-faint);margin-top:5px;}
+.storage-warning{background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.3);color:var(--dev);border-radius:6px;padding:8px 12px;font-size:12px;margin-top:8px;display:none;}
+.storage-warning.show{display:block;}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:16px;border-top:1px solid var(--border);}
+
+/* Confirm + lightbox + toast */
+.confirm-overlay{position:fixed;inset:0;background:rgba(0,0,0,.82);display:none;align-items:center;justify-content:center;z-index:500;backdrop-filter:blur(6px);}
+.confirm-overlay.open{display:flex;}
+.confirm-box{background:var(--surface);border:1px solid var(--border);border-radius:13px;padding:28px;width:380px;max-width:96vw;text-align:center;box-shadow:0 16px 60px rgba(0,0,0,.7);}
+.confirm-box h3{margin-bottom:10px;font-size:16px;}
+.confirm-box p{font-size:13px;color:var(--text-dim);margin-bottom:20px;line-height:1.5;}
+.confirm-btns{display:flex;gap:10px;justify-content:center;}
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.93);display:none;flex-direction:column;z-index:700;}
+.lightbox.open{display:flex;}
+.lightbox-toolbar{display:flex;align-items:center;gap:8px;justify-content:center;padding:12px;flex-shrink:0;z-index:2;}
+.lb-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);width:36px;height:36px;border-radius:8px;font-size:18px;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all .15s;}
+.lb-btn:hover{border-color:var(--accent);background:var(--surface3);}
+.lb-btn.lb-close{margin-left:12px;}
+.lb-btn.lb-close:hover{border-color:var(--prod);color:var(--prod);}
+.lb-zoom{color:var(--text-dim);font-size:13px;font-family:var(--mono);min-width:48px;text-align:center;user-select:none;}
+.lightbox-stage{flex:1;overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative;}
+.lightbox-stage img{max-width:92vw;max-height:80vh;border-radius:8px;transform-origin:center center;transition:transform .12s ease;cursor:zoom-in;user-select:none;-webkit-user-drag:none;}
+.lightbox-stage.zoomed img{cursor:grab;}
+.lightbox-stage.dragging img{cursor:grabbing;transition:none;}
+.toast-wrap{position:fixed;bottom:22px;right:22px;display:flex;flex-direction:column;gap:8px;z-index:800;}
+.toast{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:10px 16px;border-radius:8px;font-size:13px;box-shadow:0 4px 20px rgba(0,0,0,.5);animation:slideIn .2s ease;max-width:320px;}
+.toast.ok{border-left:3px solid var(--pass);}
+.toast.err{border-left:3px solid var(--prod);}
+@keyframes slideIn{from{opacity:0;transform:translateX(20px);}to{opacity:1;transform:translateX(0);}}
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+#importFileInput{display:none;}
+.import-banner{margin:10px 20px 0;padding:12px 16px;background:var(--surface2);border:1px solid var(--accent);border-radius:9px;font-size:13px;color:var(--text-dim);line-height:1.5;display:none;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <svg class="logo-bug" width="26" height="26" viewBox="0 0 32 32" fill="none">
+      <circle cx="7" cy="20" r="4" fill="#5fd068" opacity="0.55"/>
+      <circle cx="11" cy="18" r="4.3" fill="#5fd068" opacity="0.7"/>
+      <circle cx="15.5" cy="17" r="4.6" fill="#5fd068" opacity="0.85"/>
+      <circle cx="21" cy="15.5" r="5.4" fill="#5fd068"/>
+      <path d="M20 11 Q19 7 17.5 6.5" stroke="#5fd068" stroke-width="1.4" stroke-linecap="round" fill="none"/>
+      <path d="M23 11 Q24 7 25.5 6.5" stroke="#5fd068" stroke-width="1.4" stroke-linecap="round" fill="none"/>
+      <circle cx="17.3" cy="6.2" r="1.1" fill="#5fd068"/>
+      <circle cx="25.7" cy="6.2" r="1.1" fill="#5fd068"/>
+      <circle cx="20.2" cy="14.8" r="1.15" fill="#fff"/>
+      <circle cx="23.2" cy="14.8" r="1.15" fill="#fff"/>
+      <circle cx="20.4" cy="15" r="0.55" fill="#16331a"/>
+      <circle cx="23.4" cy="15" r="0.55" fill="#16331a"/>
+      <path d="M20 18 Q21.8 19.6 23.6 18" stroke="#16331a" stroke-width="1" stroke-linecap="round" fill="none"/>
+      <circle cx="18.6" cy="17.4" r="1" fill="#fff" opacity="0.35"/>
+    </svg>
+    Bug Reports <em>/ CPOchat</em>
+  </div>
+  <div class="htools">
+    <button class="btn btn-ghost btn-sm" onclick="exportJSON()">⬆ Export</button>
+    <button class="btn btn-ghost btn-sm" onclick="document.getElementById('importFileInput').click()">⬇ Import</button>
+    <input type="file" id="importFileInput" accept=".json" onchange="importJSON(event)">
+    <button class="btn btn-primary btn-sm" onclick="openModal()">＋ New Bug</button>
+  </div>
+</header>
+
+<div class="toolbar">
+  <input type="text" id="searchInput" placeholder="🔍 Search any keyword…" oninput="render()">
+  <div class="owner-multi" id="bugIdMulti">
+    <button class="owner-multi-btn" id="bugIdMultiBtn" onclick="toggleBugIdPanel(event)">All IDs ▾</button>
+    <div class="owner-panel" id="bugIdPanel">
+      <input type="text" class="panel-search" id="bugIdSearch" placeholder="Search ID…" oninput="filterPanel('bugId')" onclick="event.stopPropagation()">
+      <div class="panel-options" id="bugIdOptions"></div>
+      <div class="owner-panel-actions"><button onclick="clearBugIdSelection()">Clear</button></div>
+    </div>
+  </div>
+  <div class="owner-multi" id="ownerMulti">
+    <button class="owner-multi-btn" id="ownerMultiBtn" onclick="toggleOwnerPanel(event)">All Owners ▾</button>
+    <div class="owner-panel" id="ownerPanel">
+      <input type="text" class="panel-search" id="ownerSearch" placeholder="Search owner…" oninput="filterPanel('owner')" onclick="event.stopPropagation()">
+      <div class="panel-options" id="ownerOptions"></div>
+      <div class="owner-panel-actions"><button onclick="clearOwnerSelection()">Clear</button></div>
+    </div>
+  </div>
+  <select id="passFilter" onchange="render()">
+    <option value="">All Statuses (Active)</option>
+    <option value="notstarted">Not Started</option>
+    <option value="inprogress">In Progress</option>
+    <option value="ready">Ready to Archive ✓</option>
+  </select>
+  <button class="btn btn-clear" onclick="clearFilters()">✕ Clear</button>
+  <button class="btn btn-ghost btn-sm" id="sortBtn" onclick="toggleSort()" title="Sort by Bug ID">↓ ID Z–A</button>
+</div>
+
+<div class="summary-bar" id="summaryBar"></div>
+<div class="import-banner" id="importBanner">
+  <strong style="color:var(--text);">No bugs yet.</strong> If you have data exported from a previous version, click <strong>⬇ Import</strong> above to load it.
+</div>
+
+<div class="matrix-wrap">
+  <table class="matrix" id="matrix">
+    <thead>
+      <tr>
+        <th style="width:60%;">Bug</th>
+        <th class="col-h-test" style="width:13.33%;"><span class="th-env"><span class="th-dot test"></span>Test</span></th>
+        <th class="col-h-dev" style="width:13.33%;"><span class="th-env"><span class="th-dot dev"></span>Dev</span></th>
+        <th class="col-h-prod" style="width:13.34%;"><span class="th-env"><span class="th-dot prod"></span>Production</span></th>
+      </tr>
+    </thead>
+    <tbody id="matrixBody"></tbody>
+  </table>
+  <div class="empty-state" id="emptyState" style="display:none;">No bugs to show. Click <strong>＋ New Bug</strong> to add one.</div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h2 id="modalTitle">New Bug</h2>
+    <div class="form-cols">
+      <div class="form-row"><label>Bug ID *</label><input type="text" id="fBugId" placeholder="e.g. CPO-0511-1"></div>
+      <div class="form-row"><label>Owner</label><input type="text" id="fOwner" placeholder="e.g. Alice" list="ownerSuggestions"><datalist id="ownerSuggestions"></datalist></div>
+    </div>
+    <div class="form-row"><label>Title *</label><input type="text" id="fTitle" placeholder="Short bug title"></div>
+    <div class="form-row"><label>Description</label><textarea id="fDesc" placeholder="Describe the bug…"></textarea></div>
+    <div class="form-row"><label>Solution</label><textarea id="fSolution" placeholder="How it was / will be fixed…"></textarea></div>
+    <div class="form-cols">
+      <div class="form-row"><label>Jira Ticket / URL</label><input type="text" id="fJira" placeholder="PROJ-123 or https://…"></div>
+      <div class="form-row"><label>Notes</label><input type="text" id="fNotes" placeholder="Workarounds, context…"></div>
+    </div>
+
+    <!-- Per-environment editors -->
+    <div id="envEditors"></div>
+
+    <div class="storage-warning" id="storageWarning">⚠ Data is getting large (&gt;50 MB) — consider archiving/deleting old bugs and keeping an Export backup.</div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCard()">Save Bug</button>
+    </div>
+  </div>
+</div>
+
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <h3 id="confirmTitle"></h3><p id="confirmMsg"></p>
+    <div class="confirm-btns">
+      <button class="btn btn-ghost" onclick="closeConfirm(false)">Cancel</button>
+      <button class="btn btn-danger" onclick="closeConfirm(true)">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<div class="lightbox" id="lightbox">
+  <div class="lightbox-toolbar">
+    <button class="lb-btn" onclick="lbZoom(-0.25);event.stopPropagation()" title="Zoom out">−</button>
+    <span class="lb-zoom" id="lbZoomLabel">100%</span>
+    <button class="lb-btn" onclick="lbZoom(0.25);event.stopPropagation()" title="Zoom in">＋</button>
+    <button class="lb-btn" onclick="lbResetZoom();event.stopPropagation()" title="Reset">⤢</button>
+    <button class="lb-btn lb-close" onclick="closeLightbox()" title="Close (Esc)">✕</button>
+  </div>
+  <div class="lightbox-stage" id="lightboxStage">
+    <img id="lightboxImg" src="" alt="" draggable="false">
+  </div>
+</div>
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+/* ══ STATE ══ */
+const LS_KEY='bugzone_v2matrix';      // legacy localStorage key (for one-time migration)
+const LS_EXP='bugzone_v2_expanded';   // small UI pref — stays in localStorage
+const LS_SORT='bugzone_v2_sort';      // small UI pref — stays in localStorage
+const IDB_NAME='bugzone_db';
+const IDB_STORE='kv';
+const IDB_BUGS_KEY='bugs';            // key inside IndexedDB holding the bugs array
+const ENVS=['Test','Dev','Production'];
+const ENV_CLASS={Test:'test',Dev:'dev',Production:'prod'};
+let bugs=[];
+let expanded=new Set();
+let editingId=null;
+let confirmCallback=null;
+let sortDir='desc';
+let currentView='active'; // 'active' | 'archive'
+let selectedOwners=new Set(); // empty = all owners
+let selectedBugIds=new Set(); // empty = all bug IDs
+// pending screenshots while editing: {Test:{bug:[],pass:[]},Dev:{...},Production:{...}}
+let pendingSS=null;
+let activePaste=null; // {env, kind}
+
+/* ══ INDEXEDDB WRAPPER ══
+   A tiny key-value store backed by IndexedDB. Holds the (potentially large)
+   bugs array, which would otherwise overflow localStorage's ~5MB limit.
+   IndexedDB typically allows hundreds of MB. */
+let _db=null;
+function idbOpen(){
+  return new Promise((resolve,reject)=>{
+    if(_db) return resolve(_db);
+    const req=indexedDB.open(IDB_NAME,1);
+    req.onupgradeneeded=e=>{
+      const db=e.target.result;
+      if(!db.objectStoreNames.contains(IDB_STORE)) db.createObjectStore(IDB_STORE);
+    };
+    req.onsuccess=e=>{ _db=e.target.result; resolve(_db); };
+    req.onerror=e=>reject(e.target.error);
+  });
+}
+function idbGet(key){
+  return idbOpen().then(db=>new Promise((resolve,reject)=>{
+    const tx=db.transaction(IDB_STORE,'readonly');
+    const req=tx.objectStore(IDB_STORE).get(key);
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error);
+  }));
+}
+function idbSet(key,val){
+  return idbOpen().then(db=>new Promise((resolve,reject)=>{
+    const tx=db.transaction(IDB_STORE,'readwrite');
+    tx.objectStore(IDB_STORE).put(val,key);
+    tx.oncomplete=()=>resolve(true);
+    tx.onerror=()=>reject(tx.error);
+  }));
+}
+
+/* ══ PERSIST ══ */
+// bugs → IndexedDB (large). Fire-and-forget with error toast on failure.
+function save(){
+  idbSet(IDB_BUGS_KEY, bugs).catch(e=>{
+    console.error('IDB save failed',e);
+    toast('Could not save — storage error. Try Export to back up.','err');
+  });
+}
+// small UI prefs stay in localStorage (tiny, fine there)
+function saveExp(){ try{ localStorage.setItem(LS_EXP,JSON.stringify([...expanded])); }catch(e){} }
+function loadExp(){ try{ const r=localStorage.getItem(LS_EXP); expanded=r?new Set(JSON.parse(r)):new Set(); }catch(e){ expanded=new Set(); } }
+
+function blankEnv(){ return {eta:'',passed:false,bugSS:[],passSS:[]}; }
+function migrate(b){
+  if(!b.id) b.id=uid();
+  if(!b.bugId) b.bugId = b.jira || b.title || '(no id)';
+  if(!b.title) b.title='';
+  if(!b.description) b.description='';
+  if(typeof b.solution!=='string') b.solution='';
+  if(!b.owner) b.owner='';
+  if(!b.jira) b.jira='';
+  if(!b.notes) b.notes='';
+  if(!b.history) b.history=[];
+  if(!b.envs) b.envs={Test:blankEnv(),Dev:blankEnv(),Production:blankEnv()};
+  ENVS.forEach(e=>{ if(!b.envs[e]) b.envs[e]=blankEnv();
+    const en=b.envs[e];
+    if(!Array.isArray(en.bugSS)) en.bugSS=[];
+    if(!Array.isArray(en.passSS)) en.passSS=[];
+    if(typeof en.passed!=='boolean') en.passed=false;
+    if(typeof en.eta!=='string') en.eta='';
+  });
+  if(!b.createdAt) b.createdAt=new Date().toISOString();
+  if(!b.updatedAt) b.updatedAt=b.createdAt;
+  if(typeof b.archived!=='boolean') b.archived=false;
+  return b;
+}
+// Async load: read from IndexedDB; if empty, one-time migrate any old localStorage data.
+async function load(){
+  try{
+    let stored = await idbGet(IDB_BUGS_KEY);
+    if(!stored){
+      // One-time migration from the old localStorage build
+      const raw = localStorage.getItem(LS_KEY);
+      if(raw){
+        try{
+          const arr=JSON.parse(raw);
+          if(Array.isArray(arr) && arr.length){
+            bugs=arr.map(migrate);
+            await idbSet(IDB_BUGS_KEY, bugs);   // copy into IndexedDB
+            toast(`Migrated ${bugs.length} bug(s) to the new storage`,'ok');
+            return;
+          }
+        }catch(e){}
+      }
+      bugs=[];
+      return;
+    }
+    bugs = Array.isArray(stored) ? stored.map(migrate) : [];
+  }catch(e){
+    console.error('IDB load failed',e);
+    bugs=[];
+    toast('Could not load saved data.','err');
+  }
+}
+
+/* ══ UTILS ══ */
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtDate(iso){ const d=new Date(iso); return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})+' '+d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}); }
+const _nat=new Intl.Collator(undefined,{numeric:true,sensitivity:'base'});
+function allPassed(b){ return ENVS.every(e=>b.envs[e].passed); }
+function readyToArchive(b){ return allPassed(b) && !b.archived; }
+function passedCount(b){ return ENVS.filter(e=>b.envs[e].passed).length; }
+function isNotStarted(b){ return passedCount(b)===0; }
+function isInProgress(b){ const n=passedCount(b); return n>0 && n<ENVS.length; }
+
+/* ══ ARCHIVE ══ */
+function archiveBug(id){
+  const b=bugs.find(x=>x.id===id); if(!b) return;
+  b.archived=true;
+  const now=new Date().toISOString(); b.updatedAt=now;
+  const reason = allPassed(b) ? 'all environments passed' : 'manually archived';
+  b.history.push({ts:now,action:`📦 Archived (${reason})`});
+  save(); render(); toast('Moved to Archive','ok');
+}
+function unarchiveBug(id){
+  const b=bugs.find(x=>x.id===id); if(!b) return;
+  b.archived=false;
+  const now=new Date().toISOString(); b.updatedAt=now;
+  b.history.push({ts:now,action:'↩ Moved back to active'});
+  save(); render(); toast('Moved back to active bugs','ok');
+}
+function deleteAllArchived(){
+  const archived=bugs.filter(b=>b.archived);
+  if(!archived.length){ toast('Archive is already empty','ok'); return; }
+  showConfirm('Delete all archived bugs?',
+    `This will permanently delete all ${archived.length} archived bug(s) and their screenshots. This cannot be undone.`,
+    ()=>{
+      bugs=bugs.filter(b=>!b.archived);
+      archived.forEach(b=>expanded.delete(b.id));
+      saveExp(); save(); render();
+      toast(`Deleted ${archived.length} archived bug(s)`,'ok');
+    });
+}
+function switchView(v){
+  currentView=v;
+  document.getElementById('searchInput').value='';
+  render();
+}
+
+function uniqueOwners(){ return [...new Set(bugs.map(b=>b.owner).filter(Boolean))].sort(); }
+function refreshOwnerFilter(){
+  const owners=uniqueOwners();
+  // prune any selected owners that no longer exist
+  [...selectedOwners].forEach(o=>{ if(!owners.includes(o)) selectedOwners.delete(o); });
+
+  const opts=document.getElementById('ownerOptions');
+  if(opts){
+    if(!owners.length){
+      opts.innerHTML='<div class="owner-panel-empty">No owners yet</div>';
+    } else {
+      opts.innerHTML = owners.map(o=>
+        `<label class="owner-opt"><input type="checkbox" value="${esc(o)}" ${selectedOwners.has(o)?'checked':''} onchange="onOwnerToggle(this)">${esc(o)}</label>`
+      ).join('');
+    }
+    filterPanel('owner'); // re-apply any active search text
+  }
+  updateOwnerBtn();
+  // datalist for the modal owner input
+  document.getElementById('ownerSuggestions').innerHTML=owners.map(o=>`<option value="${esc(o)}">`).join('');
+}
+function updateOwnerBtn(){
+  const btn=document.getElementById('ownerMultiBtn'); if(!btn) return;
+  const n=selectedOwners.size;
+  btn.textContent = (n===0 ? 'All Owners' : (n===1 ? [...selectedOwners][0] : `${n} owners`)) + ' ▾';
+  btn.classList.toggle('active', n>0);
+}
+function toggleOwnerPanel(e){
+  e.stopPropagation();
+  document.getElementById('ownerPanel').classList.toggle('open');
+}
+function onOwnerToggle(cb){
+  if(cb.checked) selectedOwners.add(cb.value); else selectedOwners.delete(cb.value);
+  updateOwnerBtn();
+  render();
+}
+function clearOwnerSelection(){
+  selectedOwners.clear();
+  document.querySelectorAll('#ownerPanel input[type=checkbox]').forEach(c=>c.checked=false);
+  updateOwnerBtn();
+  render();
+}
+// close panel when clicking outside
+document.addEventListener('click',function(e){
+  const m=document.getElementById('ownerMulti');
+  if(m && !m.contains(e.target)) document.getElementById('ownerPanel').classList.remove('open');
+  const m2=document.getElementById('bugIdMulti');
+  if(m2 && !m2.contains(e.target)) document.getElementById('bugIdPanel').classList.remove('open');
+});
+
+/* ══ BUG ID MULTI-SELECT ══ */
+function uniqueBugIds(){ return [...new Set(bugs.map(b=>b.bugId).filter(Boolean))].sort((a,b)=>_nat.compare(a,b)); }
+function refreshBugIdFilter(){
+  const ids=uniqueBugIds();
+  [...selectedBugIds].forEach(id=>{ if(!ids.includes(id)) selectedBugIds.delete(id); });
+  const opts=document.getElementById('bugIdOptions');
+  if(opts){
+    if(!ids.length){
+      opts.innerHTML='<div class="owner-panel-empty">No bug IDs yet</div>';
+    } else {
+      opts.innerHTML = ids.map(id=>
+        `<label class="owner-opt"><input type="checkbox" value="${esc(id)}" ${selectedBugIds.has(id)?'checked':''} onchange="onBugIdToggle(this)">${esc(id)}</label>`
+      ).join('');
+    }
+    filterPanel('bugId'); // re-apply any active search text
+  }
+  updateBugIdBtn();
+}
+function updateBugIdBtn(){
+  const btn=document.getElementById('bugIdMultiBtn'); if(!btn) return;
+  const n=selectedBugIds.size;
+  btn.textContent = (n===0 ? 'All IDs' : (n===1 ? [...selectedBugIds][0] : `${n} IDs`)) + ' ▾';
+  btn.classList.toggle('active', n>0);
+}
+function toggleBugIdPanel(e){
+  e.stopPropagation();
+  document.getElementById('bugIdPanel').classList.toggle('open');
+}
+function onBugIdToggle(cb){
+  if(cb.checked) selectedBugIds.add(cb.value); else selectedBugIds.delete(cb.value);
+  updateBugIdBtn();
+  render();
+}
+function clearBugIdSelection(){
+  selectedBugIds.clear();
+  document.querySelectorAll('#bugIdPanel input[type=checkbox]').forEach(c=>c.checked=false);
+  updateBugIdBtn();
+  render();
+}
+
+/* ══ PANEL LIVE SEARCH ══ */
+function filterPanel(which){
+  const searchEl=document.getElementById(which==='bugId'?'bugIdSearch':'ownerSearch');
+  const optsEl=document.getElementById(which==='bugId'?'bugIdOptions':'ownerOptions');
+  if(!searchEl||!optsEl) return;
+  const q=searchEl.value.toLowerCase().trim();
+  const labels=optsEl.querySelectorAll('.owner-opt');
+  let visible=0;
+  labels.forEach(l=>{
+    const txt=l.textContent.toLowerCase();
+    const show = !q || txt.includes(q);
+    l.style.display = show ? '' : 'none';
+    if(show) visible++;
+  });
+  // remove any old "no match" message
+  const old=optsEl.querySelector('.panel-no-match');
+  if(old) old.remove();
+  if(q && visible===0 && labels.length){
+    const d=document.createElement('div');
+    d.className='panel-no-match';
+    d.textContent='No match';
+    optsEl.appendChild(d);
+  }
+}
+
+/* ══ SORT ══ */
+function toggleSort(){ sortDir=sortDir==='desc'?'asc':'desc'; try{localStorage.setItem(LS_SORT,sortDir);}catch(e){} updateSortBtn(); render(); }
+function updateSortBtn(){ const b=document.getElementById('sortBtn'); if(b) b.textContent=sortDir==='desc'?'↓ ID Z–A':'↑ ID A–Z'; }
+function initSort(){ const s=localStorage.getItem(LS_SORT); if(s==='asc'||s==='desc') sortDir=s; updateSortBtn(); }
+
+/* ══ FILTER ══ */
+function getFiltered(){
+  const q=document.getElementById('searchInput').value.toLowerCase().trim();
+  const pf=document.getElementById('passFilter').value;
+  return bugs.filter(b=>{
+    // view scope: active page hides archived; archive page shows only archived
+    if(currentView==='archive' ? !b.archived : b.archived) return false;
+    // multi-owner: empty selection = all
+    if(selectedOwners.size>0 && !selectedOwners.has(b.owner)) return false;
+    // multi-bugId: empty selection = all
+    if(selectedBugIds.size>0 && !selectedBugIds.has(b.bugId)) return false;
+    if(pf==='ready' && !allPassed(b)) return false;
+    if(pf==='inprogress' && !isInProgress(b)) return false;
+    if(pf==='notstarted' && !isNotStarted(b)) return false;
+    if(q){
+      const etas=ENVS.map(e=>b.envs[e]?.eta||'');
+      const hay=[b.bugId,b.title,b.description,b.solution,b.notes,b.jira,b.owner,...etas]
+        .map(v=>v||'').join(' ').toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+function clearFilters(){
+  document.getElementById('searchInput').value='';
+  selectedOwners.clear();
+  selectedBugIds.clear();
+  document.getElementById('passFilter').value='';
+  render();
+}
+
+/* ══ RENDER ══ */
+function render(){
+  refreshOwnerFilter();
+  refreshBugIdFilter();
+  document.getElementById('importBanner').style.display = bugs.length===0 ? 'block' : 'none';
+
+  let list=getFiltered();
+  list=list.slice().sort((a,b)=>_nat.compare(a.bugId,b.bugId));
+  if(sortDir==='desc') list.reverse();
+
+  // counts
+  const active=bugs.filter(b=>!b.archived);
+  const archivedCount=bugs.filter(b=>b.archived).length;
+  const activeTotal=active.length;
+  const readyCount=active.filter(readyToArchive).length;
+  const inProgressCount=active.filter(isInProgress).length;
+  const notStartedCount=active.filter(isNotStarted).length;
+
+  // summary — depends on which view
+  if(currentView==='active'){
+    document.getElementById('summaryBar').innerHTML=`
+      <div class="summary-pill"><span class="num">${activeTotal}</span> Active Bugs</div>
+      <div class="summary-pill"><span class="num">${notStartedCount}</span> Not Started</div>
+      <div class="summary-pill"><span class="num">${inProgressCount}</span> In Progress</div>
+      <div class="summary-pill pass-pill"><span class="num">${readyCount}</span> Ready to Archive ✓</div>
+      <div class="summary-pill arc-entry" onclick="switchView('archive')" title="Open Archive">
+        <span class="num">${archivedCount}</span> 📦 Archive →
+      </div>
+    `;
+  } else {
+    document.getElementById('summaryBar').innerHTML=`
+      <div class="summary-pill back-entry" onclick="switchView('active')" title="Back to active bugs">← Back to Active</div>
+      <div class="summary-pill arc-current"><span class="num">${archivedCount}</span> 📦 Archived Bugs</div>
+      ${archivedCount>0?`<div class="summary-pill delall-entry" onclick="deleteAllArchived()" title="Permanently delete all archived bugs">🗑 Delete All</div>`:''}
+    `;
+  }
+
+  const body=document.getElementById('matrixBody');
+  const empty=document.getElementById('emptyState');
+  if(!list.length){
+    body.innerHTML='';
+    empty.style.display='block';
+    empty.innerHTML = currentView==='archive'
+      ? 'Archive is empty. Bugs you archive (all environments passed) will appear here.'
+      : 'No bugs to show. Click <strong>＋ New Bug</strong> to add one.';
+    return;
+  }
+  empty.style.display='none';
+  body.innerHTML=list.map(rowHTML).join('');
+
+  // wire screenshot lightbox clicks
+  list.forEach(b=>{
+    ENVS.forEach(env=>{
+      ['bugSS','passSS'].forEach(kind=>{
+        b.envs[env][kind].forEach((src,i)=>{
+          const img=document.getElementById(`ss-${b.id}-${env}-${kind}-${i}`);
+          if(img) img.onclick=ev=>{ ev.stopPropagation(); openLightbox(src); };
+        });
+      });
+    });
+  });
+}
+
+function rowHTML(b){
+  const isExp=expanded.has(b.id);
+  const passed=allPassed(b);
+  const ownerHTML=b.owner?`<div class="bug-owner"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg> ${esc(b.owner)}</div>`:'';
+
+  // shared detail (notes, jira, history) — shown when expanded
+  const jiraHTML=b.jira?(b.jira.startsWith('http')?`<a class="detail-chip" href="${esc(b.jira)}" target="_blank">🔗 ${esc(b.jira.length>24?b.jira.slice(0,24)+'…':b.jira)}</a>`:`<span class="detail-chip">🎫 ${esc(b.jira)}</span>`):'';
+  const notesHTML=b.notes?`<span class="detail-chip">📝 ${esc(b.notes)}</span>`:'';
+  const histHTML=b.history.slice().reverse().map(h=>`<div class="history-item"><span class="hts">${fmtDate(h.ts)}</span>${esc(h.action)}</div>`).join('');
+  const sharedDetail=`
+    <div class="shared-detail">
+      ${(jiraHTML||notesHTML)?`<div>${jiraHTML}${notesHTML}</div>`:''}
+      <button class="history-toggle" onclick="toggleHist('${b.id}',event)">▸ History (${b.history.length})</button>
+      <div class="history-list" id="hist-${b.id}">${histHTML}</div>
+    </div>`;
+
+  const readyBadge = readyToArchive(b) ? `<span class="ready-badge">✓ Ready to archive</span>` : '';
+
+  const actionBtns = b.archived
+    ? `<button class="moveback" onclick="unarchiveBug('${b.id}')">↩ Move back to active</button>
+       <button onclick="openModal('${b.id}')">✏ Edit</button>
+       <button class="del" onclick="deleteCard('${b.id}')">✕ Delete</button>`
+    : `${readyBadge}
+       <button onclick="openModal('${b.id}')">✏ Edit</button>
+       <button class="del" onclick="deleteCard('${b.id}')">✕ Delete</button>
+       <button onclick="archiveBug('${b.id}')">📦 Archive</button>`;
+
+  const infoCell=`
+    <td>
+      <div style="display:flex;align-items:flex-start;gap:8px;">
+        <div style="flex:1;">
+          <div class="bug-id">${esc(b.bugId)}</div>
+          <div class="bug-title">${esc(b.title)}</div>
+          ${b.description?`<div class="bug-desc">${esc(b.description)}</div>`:''}
+          ${b.solution?`<div class="bug-solution"><svg class="sol-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1h6c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2Z"/></svg><span class="sol-label">Solution:</span> ${esc(b.solution)}</div>`:''}
+          ${ownerHTML}
+        </div>
+        <span class="expand-chevron" onclick="toggleExp('${b.id}',event)">▾</span>
+      </div>
+      <div class="info-actions">
+        ${actionBtns}
+      </div>
+      ${sharedDetail}
+    </td>`;
+
+  const envCells=ENVS.map(env=>{
+    const en=b.envs[env];
+    const etaHTML=en.eta?`<div class="env-eta"><span class="lbl">Bug Fix ETA</span><span class="val">${esc(en.eta)}</span></div>`:`<div class="env-eta"><span class="lbl">Bug Fix ETA</span><span class="val" style="color:var(--text-faint)">—</span></div>`;
+    const checkHTML=`<div class="pass-check ${en.passed?'checked':''}" onclick="togglePass('${b.id}','${env}')"><span class="pass-box">${en.passed?'✓':''}</span>${en.passed?'Passed':'Mark passed'}</div>`;
+    const bugThumbs=en.bugSS.map((src,i)=>`<img id="ss-${b.id}-${env}-bugSS-${i}" src="${src}" alt="" title="Bug evidence ${i+1}">`).join('');
+    const passThumbs=en.passSS.map((src,i)=>`<img id="ss-${b.id}-${env}-passSS-${i}" src="${src}" alt="" title="Validation ${i+1}">`).join('');
+    // Screenshots are always visible (click to enlarge). Sections hide entirely if empty.
+    const ssArea=`
+      <div class="env-ss">
+        ${en.bugSS.length?`
+        <div class="ss-block">
+          <div class="ss-block-lbl bug-l"><span style="width:5px;height:5px;border-radius:50%;background:#fff;display:inline-block;"></span>Bug Evidence (${en.bugSS.length})</div>
+          <div class="ss-thumbs">${bugThumbs}</div>
+        </div>`:''}
+        ${en.passSS.length?`
+        <div class="ss-block">
+          <div class="ss-block-lbl pass-l"><span style="width:5px;height:5px;border-radius:50%;background:var(--pass);display:inline-block;"></span>Validation (${en.passSS.length})</div>
+          <div class="ss-thumbs">${passThumbs}</div>
+        </div>`:''}
+      </div>`;
+    return `<td class="env-cell">${etaHTML}${checkHTML}${ssArea}</td>`;
+  }).join('');
+
+  return `<tr class="bug-row ${isExp?'expanded':''} ${passed?'all-passed':''}" id="row-${b.id}">${infoCell}${envCells}</tr>`;
+}
+
+function toggleExp(id,e){ if(e)e.stopPropagation(); if(expanded.has(id))expanded.delete(id); else expanded.add(id); saveExp(); render(); }
+function toggleHist(id,e){ if(e)e.stopPropagation(); const el=document.getElementById('hist-'+id); const btn=el.previousElementSibling; const o=el.classList.toggle('open'); btn.textContent=`${o?'▾':'▸'} History (${bugs.find(b=>b.id===id)?.history.length||0})`; }
+
+function togglePass(id,env){
+  const b=bugs.find(x=>x.id===id); if(!b) return;
+  const en=b.envs[env];
+  en.passed=!en.passed;
+  const now=new Date().toISOString();
+  b.updatedAt=now;
+  b.history.push({ts:now,action:`${env}: ${en.passed?'marked Passed ✓':'unmarked Passed'}`});
+  save(); render();
+}
+
+/* ══ MODAL ══ */
+function openModal(id){
+  editingId=id||null;
+  pendingSS={Test:{bug:[],pass:[]},Dev:{bug:[],pass:[]},Production:{bug:[],pass:[]}};
+  document.getElementById('modalTitle').textContent=id?'Edit Bug':'New Bug';
+  document.getElementById('fBugId').value='';
+  document.getElementById('fTitle').value='';
+  document.getElementById('fDesc').value='';
+  document.getElementById('fSolution').value='';
+  document.getElementById('fOwner').value='';
+  document.getElementById('fJira').value='';
+  document.getElementById('fNotes').value='';
+
+  let envData={Test:blankEnv(),Dev:blankEnv(),Production:blankEnv()};
+  if(id){
+    const b=bugs.find(x=>x.id===id); if(!b) return;
+    document.getElementById('fBugId').value=b.bugId;
+    document.getElementById('fTitle').value=b.title;
+    document.getElementById('fDesc').value=b.description;
+    document.getElementById('fSolution').value=b.solution||'';
+    document.getElementById('fOwner').value=b.owner;
+    document.getElementById('fJira').value=b.jira;
+    document.getElementById('fNotes').value=b.notes;
+    ENVS.forEach(e=>{ envData[e]=JSON.parse(JSON.stringify(b.envs[e])); });
+  }
+  ENVS.forEach(e=>{
+    pendingSS[e].bug=[...envData[e].bugSS];
+    pendingSS[e].pass=[...envData[e].passSS];
+  });
+  buildEnvEditors(envData);
+  checkStorageWarning();
+  document.getElementById('modalOverlay').classList.add('open');
+  setTimeout(()=>document.getElementById('fBugId').focus(),60);
+}
+
+function buildEnvEditors(envData){
+  const wrap=document.getElementById('envEditors');
+  wrap.innerHTML=ENVS.map(env=>{
+    const cls=ENV_CLASS[env];
+    const en=envData[env];
+    return `
+    <div class="env-editor ${cls}-ed">
+      <h3><span class="th-dot ${cls}"></span>${env}</h3>
+      <div class="form-row"><label>Bug Fix ETA</label><input type="text" id="eta-${env}" value="${esc(en.eta)}" placeholder="e.g. 2026-05-30 · Next deployment"></div>
+      <div class="pass-toggle-row">
+        <div class="pass-check ${en.passed?'checked':''}" id="passtoggle-${env}" onclick="togglePassEditor('${env}')"><span class="pass-box">${en.passed?'✓':''}</span><span class="ptlabel">${en.passed?'Passed':'Mark passed'}</span></div>
+      </div>
+      <div class="ss-mini-section">
+        <div class="ss-mini-label">Bug Evidence</div>
+        <div class="ss-mini-gallery" id="gallery-${env}-bug"></div>
+        <button type="button" class="ss-add-btn" onclick="ssUpload('${env}','bug')">＋ Upload</button>
+        <input type="file" id="file-${env}-bug" accept="image/*" multiple style="display:none" onchange="ssFiles(event,'${env}','bug')">
+        <textarea class="ss-paste" placeholder="Click + Ctrl+V to paste bug screenshot" onfocus="activePaste={env:'${env}',kind:'bug'}" onblur="activePaste=null"></textarea>
+      </div>
+      <div class="ss-mini-section">
+        <div class="ss-mini-label">Validation / Pass Evidence</div>
+        <div class="ss-mini-gallery" id="gallery-${env}-pass"></div>
+        <button type="button" class="ss-add-btn" onclick="ssUpload('${env}','pass')">＋ Upload</button>
+        <input type="file" id="file-${env}-pass" accept="image/*" multiple style="display:none" onchange="ssFiles(event,'${env}','pass')">
+        <textarea class="ss-paste" placeholder="Click + Ctrl+V to paste validation screenshot" onfocus="activePaste={env:'${env}',kind:'pass'}" onblur="activePaste=null"></textarea>
+      </div>
+    </div>`;
+  }).join('');
+  // store passed states on the editor via data attr
+  ENVS.forEach(e=>{ document.getElementById('passtoggle-'+e).dataset.passed = envData[e].passed?'1':'0'; });
+  renderAllGalleries();
+}
+
+function togglePassEditor(env){
+  const el=document.getElementById('passtoggle-'+env);
+  const now = el.dataset.passed!=='1';
+  el.dataset.passed = now?'1':'0';
+  el.classList.toggle('checked',now);
+  el.querySelector('.pass-box').textContent = now?'✓':'';
+  el.querySelector('.ptlabel').textContent = now?'Passed':'Mark passed';
+}
+
+/* ══ IMAGE COMPRESSION ══
+   Downscale to max 1200px on the longest side and re-encode as JPEG (quality 0.8).
+   Greatly reduces base64 size (often 70-90% smaller) while keeping bug screenshots readable.
+   Falls back to the original data URL if anything goes wrong. */
+const SS_MAX_DIM = 1200;
+const SS_QUALITY = 0.8;
+function compressImage(dataUrl, cb){
+  try{
+    const img=new Image();
+    img.onload=function(){
+      let {width:w, height:h}=img;
+      if(w>SS_MAX_DIM || h>SS_MAX_DIM){
+        if(w>=h){ h=Math.round(h*SS_MAX_DIM/w); w=SS_MAX_DIM; }
+        else    { w=Math.round(w*SS_MAX_DIM/h); h=SS_MAX_DIM; }
+      }
+      const canvas=document.createElement('canvas');
+      canvas.width=w; canvas.height=h;
+      const ctx=canvas.getContext('2d');
+      // white background so transparent PNGs don't turn black when saved as JPEG
+      ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,w,h);
+      ctx.drawImage(img,0,0,w,h);
+      let out;
+      try{ out=canvas.toDataURL('image/jpeg',SS_QUALITY); }catch(e){ out=dataUrl; }
+      // safety: if compression somehow made it bigger, keep original
+      cb(out && out.length < dataUrl.length ? out : dataUrl);
+    };
+    img.onerror=function(){ cb(dataUrl); };
+    img.src=dataUrl;
+  }catch(e){ cb(dataUrl); }
+}
+
+function ssUpload(env,kind){ document.getElementById(`file-${env}-${kind}`).click(); }
+function ssFiles(e,env,kind){
+  const files=[...e.target.files]; if(!files.length) return;
+  let rem=files.length;
+  files.forEach(f=>{ const r=new FileReader(); r.onload=ev=>{
+    compressImage(ev.target.result, out=>{
+      pendingSS[env][kind].push(out);
+      if(!--rem){renderAllGalleries();checkStorageWarning();}
+    });
+  }; r.readAsDataURL(f); });
+  e.target.value='';
+}
+document.addEventListener('paste',function(e){
+  if(!document.getElementById('modalOverlay').classList.contains('open')) return;
+  if(!activePaste) return;
+  const items=e.clipboardData?.items; if(!items) return;
+  for(let it of items){ if(it.type.startsWith('image/')){ const r=new FileReader(); r.onload=ev=>{
+    compressImage(ev.target.result, out=>{
+      pendingSS[activePaste.env][activePaste.kind].push(out);
+      renderAllGalleries(); checkStorageWarning();
+    });
+  }; r.readAsDataURL(it.getAsFile()); break; } }
+});
+function renderAllGalleries(){ ENVS.forEach(env=>{ ['bug','pass'].forEach(kind=>renderGallery(env,kind)); }); }
+function renderGallery(env,kind){
+  const el=document.getElementById(`gallery-${env}-${kind}`); if(!el) return;
+  const arr=pendingSS[env][kind];
+  el.innerHTML=arr.map((src,i)=>`<div class="ss-mini-wrap"><img src="${src}" alt=""><button class="ss-mini-del" data-i="${i}" title="Remove">✕</button></div>`).join('');
+  el.querySelectorAll('.ss-mini-wrap').forEach((w,i)=>{
+    w.querySelector('img').addEventListener('click',()=>openLightbox(arr[i]));
+    w.querySelector('.ss-mini-del').addEventListener('click',ev=>{ ev.stopPropagation(); arr.splice(i,1); renderGallery(env,kind); });
+  });
+}
+function checkStorageWarning(){
+  // Rough size estimate of all data; IndexedDB allows much more than localStorage,
+  // so warn only when it gets genuinely large (~50MB).
+  let approx=0;
+  try{ approx=JSON.stringify(bugs).length; }catch(e){}
+  // add the pending (unsaved) screenshots currently in the modal
+  if(pendingSS){ try{ approx+=JSON.stringify(pendingSS).length; }catch(e){} }
+  document.getElementById('storageWarning').classList.toggle('show', approx>50*1024*1024);
+}
+function closeModal(){ document.getElementById('modalOverlay').classList.remove('open'); editingId=null; pendingSS=null; activePaste=null; }
+
+function saveCard(){
+  const bugId=document.getElementById('fBugId').value.trim();
+  const title=document.getElementById('fTitle').value.trim();
+  if(!bugId){ toast('Bug ID required','err'); document.getElementById('fBugId').focus(); return; }
+  if(!title){ toast('Title required','err'); document.getElementById('fTitle').focus(); return; }
+  const now=new Date().toISOString();
+  const owner=document.getElementById('fOwner').value.trim();
+
+  const newEnvs={};
+  ENVS.forEach(env=>{
+    newEnvs[env]={
+      eta:document.getElementById('eta-'+env).value.trim(),
+      passed:document.getElementById('passtoggle-'+env).dataset.passed==='1',
+      bugSS:[...pendingSS[env].bug],
+      passSS:[...pendingSS[env].pass]
+    };
+  });
+
+  if(editingId){
+    const b=bugs.find(x=>x.id===editingId);
+    const changes=[];
+    if(b.bugId!==bugId) changes.push(`Bug ID → ${bugId}`);
+    if(b.title!==title) changes.push('Title updated');
+    if(b.owner!==owner) changes.push(`Owner → ${owner||'(none)'}`);
+    const newSolution=document.getElementById('fSolution').value.trim();
+    if((b.solution||'')!==newSolution) changes.push('Solution updated');
+    ENVS.forEach(env=>{
+      const o=b.envs[env], n=newEnvs[env];
+      if(o.eta!==n.eta) changes.push(`${env} ETA → "${n.eta||'(none)'}"`);
+      if(o.passed!==n.passed) changes.push(`${env} ${n.passed?'Passed ✓':'unmarked'}`);
+      if(o.bugSS.length!==n.bugSS.length) changes.push(`${env} bug screenshots (${n.bugSS.length})`);
+      if(o.passSS.length!==n.passSS.length) changes.push(`${env} validation screenshots (${n.passSS.length})`);
+    });
+    b.bugId=bugId; b.title=title; b.description=document.getElementById('fDesc').value.trim();
+    b.solution=newSolution;
+    b.owner=owner; b.jira=document.getElementById('fJira').value.trim(); b.notes=document.getElementById('fNotes').value.trim();
+    b.envs=newEnvs; b.updatedAt=now;
+    b.history.push({ts:now,action:changes.length?changes.join(' · '):'Edited'});
+  } else {
+    bugs.push({ id:uid(), bugId, title, description:document.getElementById('fDesc').value.trim(),
+      solution:document.getElementById('fSolution').value.trim(),
+      owner, jira:document.getElementById('fJira').value.trim(), notes:document.getElementById('fNotes').value.trim(),
+      envs:newEnvs, createdAt:now, updatedAt:now, history:[{ts:now,action:'Bug created'}] });
+  }
+  save(); closeModal(); render(); toast(editingId?'Bug updated':'Bug created','ok');
+}
+
+function deleteCard(id){
+  const b=bugs.find(x=>x.id===id);
+  showConfirm('Delete Bug?',`"${b.bugId} — ${b.title}" will be permanently deleted.`,()=>{
+    bugs=bugs.filter(x=>x.id!==id); expanded.delete(id); saveExp(); save(); render(); toast('Deleted','ok');
+  });
+}
+
+/* ══ EXPORT / IMPORT ══ */
+function exportJSON(){
+  const data=JSON.stringify({version:'2-matrix',exportedAt:new Date().toISOString(),bugs},null,2);
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([data],{type:'application/json'}));
+  a.download=`bug-reports-${Date.now()}.json`; a.click();
+  toast(`Exported ${bugs.length} bug(s)`,'ok');
+}
+function importJSON(e){
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const data=JSON.parse(ev.target.result);
+      if(!Array.isArray(data.bugs)) throw new Error();
+      const incoming=data.bugs.map(migrate);
+      if(bugs.length===0){ bugs=incoming; save(); render(); toast(`Imported ${bugs.length} bug(s)`,'ok'); }
+      else showConfirm('Import Data?',`Merge ${incoming.length} bug(s) into your existing ${bugs.length}? (duplicate IDs get fresh IDs)`,()=>{
+        const ids=new Set(bugs.map(b=>b.id));
+        incoming.forEach(b=>{ if(ids.has(b.id)) b.id=uid(); bugs.push(b); });
+        save(); render(); toast(`Merged — total ${bugs.length}`,'ok');
+      });
+    }catch{ toast('Invalid JSON','err'); }
+    e.target.value='';
+  };
+  reader.readAsText(file);
+}
+
+/* ══ CONFIRM / LIGHTBOX / TOAST ══ */
+function showConfirm(t,m,cb){ document.getElementById('confirmTitle').textContent=t; document.getElementById('confirmMsg').textContent=m; confirmCallback=cb; document.getElementById('confirmOverlay').classList.add('open'); }
+function closeConfirm(yes){ document.getElementById('confirmOverlay').classList.remove('open'); if(yes&&confirmCallback)confirmCallback(); confirmCallback=null; }
+/* ══ LIGHTBOX with zoom + pan ══ */
+let lbScale=1, lbPanX=0, lbPanY=0;
+let lbDragging=false, lbStartX=0, lbStartY=0, lbStartPanX=0, lbStartPanY=0;
+
+function lbApply(){
+  const img=document.getElementById('lightboxImg');
+  const stage=document.getElementById('lightboxStage');
+  img.style.transform=`translate(${lbPanX}px,${lbPanY}px) scale(${lbScale})`;
+  document.getElementById('lbZoomLabel').textContent=Math.round(lbScale*100)+'%';
+  stage.classList.toggle('zoomed', lbScale>1);
+  if(lbScale<=1){ lbPanX=0; lbPanY=0; img.style.transform=`translate(0,0) scale(1)`; }
+}
+function lbZoom(delta){
+  lbScale=Math.min(6, Math.max(0.25, +(lbScale+delta).toFixed(2)));
+  lbApply();
+}
+function lbResetZoom(){ lbScale=1; lbPanX=0; lbPanY=0; lbApply(); }
+
+function openLightbox(src){
+  document.getElementById('lightboxImg').src=src;
+  lbResetZoom();
+  document.getElementById('lightbox').classList.add('open');
+}
+function closeLightbox(){
+  document.getElementById('lightbox').classList.remove('open');
+}
+
+// wire interactions once DOM is ready
+(function setupLightbox(){
+  const stage=document.getElementById('lightboxStage');
+  const img=document.getElementById('lightboxImg');
+  if(!stage||!img) return;
+  // click image: toggle zoom (1x <-> 2x). Click empty stage area: close.
+  stage.addEventListener('click', e=>{
+    if(e.target===img){
+      if(lbScale>1) lbResetZoom();
+      else { lbScale=2; lbApply(); }
+    } else {
+      closeLightbox();
+    }
+  });
+  // scroll wheel to zoom
+  stage.addEventListener('wheel', e=>{
+    e.preventDefault();
+    lbZoom(e.deltaY<0 ? 0.25 : -0.25);
+  }, {passive:false});
+  // drag to pan when zoomed
+  img.addEventListener('mousedown', e=>{
+    if(lbScale<=1) return;
+    e.preventDefault();
+    lbDragging=true; stage.classList.add('dragging');
+    lbStartX=e.clientX; lbStartY=e.clientY; lbStartPanX=lbPanX; lbStartPanY=lbPanY;
+  });
+  window.addEventListener('mousemove', e=>{
+    if(!lbDragging) return;
+    lbPanX=lbStartPanX+(e.clientX-lbStartX);
+    lbPanY=lbStartPanY+(e.clientY-lbStartY);
+    document.getElementById('lightboxImg').style.transform=`translate(${lbPanX}px,${lbPanY}px) scale(${lbScale})`;
+  });
+  window.addEventListener('mouseup', ()=>{ lbDragging=false; stage.classList.remove('dragging'); });
+})();
+function toast(msg,type='ok'){ const el=document.createElement('div'); el.className=`toast ${type}`; el.textContent=msg; document.getElementById('toastWrap').appendChild(el); setTimeout(()=>el.remove(),3200); }
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){ closeLightbox(); closeModal(); closeConfirm(false); }
+  if(document.getElementById('lightbox').classList.contains('open')){
+    if(e.key==='+'||e.key==='='){ lbZoom(0.25); }
+    if(e.key==='-'||e.key==='_'){ lbZoom(-0.25); }
+    if(e.key==='0'){ lbResetZoom(); }
+  }
+});
+document.getElementById('modalOverlay').addEventListener('click',e=>{ if(e.target===e.currentTarget) closeModal(); });
+
+/* ══ INIT ══ */
+async function init(){
+  loadExp(); initSort();
+  // show a brief loading hint while reading from IndexedDB
+  const empty=document.getElementById('emptyState');
+  if(empty){ empty.style.display='block'; empty.textContent='Loading…'; }
+  await load();
+  render();
+}
+init();
+</script>
+</body>
+</html>
