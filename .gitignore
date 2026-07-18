@@ -1,0 +1,5 @@
+# Claude 本機設定夾（不上傳）
+.claude/
+
+# macOS 系統檔案
+.DS_Store
