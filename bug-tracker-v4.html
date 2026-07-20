@@ -1438,6 +1438,7 @@ function closeConfirm(yes){ document.getElementById('confirmOverlay').classList.
 /* ══ LIGHTBOX with zoom + pan ══ */
 let lbScale=1, lbPanX=0, lbPanY=0;
 let lbDragging=false, lbStartX=0, lbStartY=0, lbStartPanX=0, lbStartPanY=0;
+let lbDragMoved=false; // true once a pan drag has actually moved — suppresses the click that follows mouseup
 
 function lbApply(){
   const img=document.getElementById('lightboxImg');
@@ -1469,6 +1470,8 @@ function closeLightbox(){
   if(!stage||!img) return;
   // click image: toggle zoom (1x <-> 2x). Click empty stage area: close.
   stage.addEventListener('click', e=>{
+    // A pan drag ends with a click event — ignore it so panning doesn't reset the zoom.
+    if(lbDragMoved){ lbDragMoved=false; return; }
     if(e.target===img){
       if(lbScale>1) lbResetZoom();
       else { lbScale=2; lbApply(); }
@@ -1485,11 +1488,13 @@ function closeLightbox(){
   img.addEventListener('mousedown', e=>{
     if(lbScale<=1) return;
     e.preventDefault();
-    lbDragging=true; stage.classList.add('dragging');
+    lbDragging=true; lbDragMoved=false; stage.classList.add('dragging');
     lbStartX=e.clientX; lbStartY=e.clientY; lbStartPanX=lbPanX; lbStartPanY=lbPanY;
   });
   window.addEventListener('mousemove', e=>{
     if(!lbDragging) return;
+    // ignore sub-pixel jitter so a plain click still counts as a click, not a drag
+    if(Math.abs(e.clientX-lbStartX)>3 || Math.abs(e.clientY-lbStartY)>3) lbDragMoved=true;
     lbPanX=lbStartPanX+(e.clientX-lbStartX);
     lbPanY=lbStartPanY+(e.clientY-lbStartY);
     document.getElementById('lightboxImg').style.transform=`translate(${lbPanX}px,${lbPanY}px) scale(${lbScale})`;
